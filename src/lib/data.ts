@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { and, asc, count, desc, eq, gt } from "drizzle-orm";
 import { purposesOf, type Catalog, type Purpose } from "./catalog";
 import { getDb, type Db } from "./db";
+import { resolveLogo } from "./logos";
 import { barriers, categories, practices, responses, toolCategories, toolRatings, tools } from "./db/schema";
 import type { WallItem } from "./sentence";
 import type { Submission } from "./validation";
@@ -44,6 +45,7 @@ function toCatalog(raw: Raw): Catalog {
           categoryIds: ids.filter((id) => linked.find((c) => c.id === id)?.purpose),
           emerging: t.emerging,
           alwaysShown: linked.some((c) => c.alwaysShown),
+          logo: resolveLogo(t.logo),
         },
         order: [categoryIndex.get(ids[0])!, t.sort] as const,
       };

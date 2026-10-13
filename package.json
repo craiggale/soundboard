@@ -9,12 +9,14 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.9",
+    "@lobehub/icons-static-svg": "^1.95.1",
     "drizzle-orm": "^0.45.4",
     "motion": "^14.1.0",
     "next": "16.4.0",
     "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "simple-icons": "^16.35.0",
     "zod": "^4.6.6"
   },
   "devDependencies": {

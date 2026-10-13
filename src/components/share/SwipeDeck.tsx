@@ -11,6 +11,7 @@ import {
 } from "motion/react";
 import type { CatalogTool, Purpose, Verdict } from "@/lib/catalog";
 import { Chevron } from "../Chevron";
+import { LogoMark, LogoTile } from "../ToolLogo";
 import { ImpactPicker } from "./ImpactPicker";
 import { Chip, GhostButton, PrimaryButton } from "./ui";
 
@@ -224,12 +225,10 @@ function CardFront({
     : "General-purpose assistant";
   return (
     <div className="relative flex h-full flex-col overflow-hidden border border-white/12 bg-gradient-to-br from-[#1f1f1f] via-[#121212] to-ink p-7 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.9)]">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-12 -right-4 select-none text-[13rem] font-bold leading-none tracking-[-0.08em] text-white/[0.04]"
-      >
-        {tool.name.replace(/[^A-Za-z0-9]/g, "").slice(0, 2)}
-      </div>
+      <LogoMark
+        logo={tool.logo}
+        className="pointer-events-none absolute -bottom-10 -right-10 h-64 w-64 -rotate-6 select-none opacity-[0.05]"
+      />
       {useOpacity && (
         <motion.div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-brand/25" style={{ opacity: useOpacity }} />
       )}
@@ -243,6 +242,8 @@ function CardFront({
           <span className="shrink-0 bg-brand px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em]">Emerging at Song</span>
         )}
       </div>
+
+      <LogoTile logo={tool.logo} className="relative mt-8 h-[72px] w-[72px] shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)]" />
 
       <h2 className="relative mt-auto break-words text-[clamp(2.4rem,9vw,3.4rem)] font-semibold leading-[0.95] tracking-[-0.035em] text-balance">
         {tool.name}
@@ -340,8 +341,8 @@ function SwipeCard({
           aria-hidden={!flipped}
           inert={!flipped}
         >
-          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-soft">
-            <Chevron className="h-2.5 w-auto text-brand" />
+          <p className="flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-soft">
+            <LogoTile logo={tool.logo} className="h-6 w-6" />
             {tool.name}
           </p>
           <h3 className="mt-2 text-xl font-semibold leading-tight tracking-[-0.02em]">What do you use it for?</h3>

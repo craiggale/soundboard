@@ -37,6 +37,7 @@ export const tools = pgTable("tools", {
   emerging: boolean("emerging").notNull().default(false),
   hidden: boolean("hidden").notNull().default(false),
   sort: integer("sort").notNull().default(0),
+  logo: text("logo"),
 });
 
 export const toolCategories = pgTable(
@@ -108,6 +109,7 @@ CREATE TABLE IF NOT EXISTS tools (
   hidden boolean NOT NULL DEFAULT false,
   sort integer NOT NULL DEFAULT 0
 );
+ALTER TABLE tools ADD COLUMN IF NOT EXISTS logo text;
 CREATE TABLE IF NOT EXISTS tool_categories (
   tool_id uuid NOT NULL REFERENCES tools(id) ON DELETE CASCADE,
   category_id text NOT NULL REFERENCES categories(id) ON DELETE CASCADE,

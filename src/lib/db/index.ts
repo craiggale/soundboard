@@ -2,7 +2,8 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import * as schema from "./schema";
-import { SEED_BARRIERS, SEED_CATEGORIES, SEED_EMERGING, SEED_PRACTICES } from "./seed";
+import { and, eq, isNull } from "drizzle-orm";
+import { SEED_BARRIERS, SEED_CATEGORIES, SEED_EMERGING, SEED_LOGOS, SEED_PRACTICES } from "./seed";
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
@@ -67,6 +68,23 @@ async function seedOnce(db: Db): Promise<Db> {
     );
     await tx.insert(schema.practices).values(SEED_PRACTICES.map((p, sort) => ({ ...p, sort })));
     await tx.insert(schema.barriers).values(SEED_BARRIERS.map((label, sort) => ({ label, sort })));
+  });
+
+  // Logos arrived after the first seed, so they get their own one-time step. Bump the key when
+  // SEED_LOGOS grows: only tools still without a logo are filled in, so admin choices are kept.
+  await db.transaction(async (tx) => {
+    const claimed = await tx
+      .insert(schema.appMeta)
+      .values({ key: "logos_seeded_v2", value: new Date().toISOString() })
+      .onConflictDoNothing()
+      .returning();
+    if (!claimed.length) return;
+    for (const [name, slug] of Object.entries(SEED_LOGOS)) {
+      await tx
+        .update(schema.tools)
+        .set({ logo: slug })
+        .where(and(eq(schema.tools.name, name), isNull(schema.tools.logo)));
+    }
   });
   return db;
 }

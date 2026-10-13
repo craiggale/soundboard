@@ -7,12 +7,15 @@ export type CatalogCategory = {
   alwaysShown: boolean;
 };
 
+export type Logo = { key: string; title: string; placeholder: boolean };
+
 export type CatalogTool = {
   name: string;
   category: string;
   categoryIds: string[];
   emerging: boolean;
   alwaysShown: boolean;
+  logo: Logo;
 };
 
 export type CatalogPractice = { name: string; summary: string };

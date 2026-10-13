@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   // Stops `next dev` writing its own block into the project's Agents.md.
   agentRules: false,
   serverExternalPackages: ["@electric-sql/pglite"],
+  // Logos are read from disk at runtime, so make sure serverless bundles include them.
+  outputFileTracingIncludes: {
+    "/*": ["./node_modules/@lobehub/icons-static-svg/icons/**/*"],
+  },
   async redirects() {
     return [{ source: "/insights", destination: "/admin", permanent: false }];
   },

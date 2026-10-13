@@ -1,6 +1,8 @@
 import { connection } from "next/server";
 import { and, asc, count, eq, ne, sql } from "drizzle-orm";
+import type { Logo } from "./catalog";
 import { getDb } from "./db";
+import { isLogoSlug, resolveLogo } from "./logos";
 import { barriers, categories, practices, responses, toolCategories, toolRatings, tools } from "./db/schema";
 
 export class AdminError extends Error {}
@@ -12,6 +14,8 @@ export type AdminTool = {
   hidden: boolean;
   categoryIds: string[];
   ratings: number;
+  logoSlug: string;
+  logo: Logo;
 };
 export type AdminCategory = {
   id: string;
@@ -61,6 +65,8 @@ export async function getAdminData(): Promise<AdminData> {
       hidden: t.hidden,
       categoryIds: links.filter((l) => l.toolId === t.id).map((l) => l.categoryId),
       ratings: ratingsByTool.get(t.name) ?? 0,
+      logoSlug: t.logo ?? "",
+      logo: resolveLogo(t.logo),
     })),
     categories: categoryRows.map((c) => ({
       id: c.id,
@@ -99,13 +105,24 @@ async function reorder(ids: string[], id: string, direction: -1 | 1, save: (id: 
 
 // Tools
 
-export type ToolInput = { id?: string; name: string; emerging: boolean; hidden: boolean; categoryIds: string[] };
+export type ToolInput = {
+  id?: string;
+  name: string;
+  emerging: boolean;
+  hidden: boolean;
+  categoryIds: string[];
+  logo: string;
+};
 
 export async function saveTool(input: ToolInput) {
   const db = await getDb();
   const name = clean(input.name, "Tool name");
   const categoryIds = [...new Set(input.categoryIds)];
   if (categoryIds.length === 0) throw new AdminError("Pick at least one category.");
+  const logo = input.logo.trim().toLowerCase() || null;
+  if (logo && !isLogoSlug(logo)) {
+    throw new AdminError(`“${logo}” isn't a Simple Icons logo. Check the slug at simpleicons.org, or leave it blank.`);
+  }
 
   const known = await db.select({ id: categories.id }).from(categories);
   if (categoryIds.some((id) => !known.some((c) => c.id === id))) throw new AdminError("Unknown category.");
@@ -122,7 +139,7 @@ export async function saveTool(input: ToolInput) {
     if (id) {
       const [existing] = await tx.select({ name: tools.name }).from(tools).where(eq(tools.id, id));
       if (!existing) throw new AdminError("That tool no longer exists.");
-      await tx.update(tools).set({ name, emerging: input.emerging, hidden: input.hidden }).where(eq(tools.id, id));
+      await tx.update(tools).set({ name, emerging: input.emerging, hidden: input.hidden, logo }).where(eq(tools.id, id));
       if (existing.name !== name) {
         await tx.update(toolRatings).set({ tool: name }).where(eq(toolRatings.tool, existing.name));
       }
@@ -130,7 +147,7 @@ export async function saveTool(input: ToolInput) {
     } else {
       [{ id }] = await tx
         .insert(tools)
-        .values({ name, emerging: input.emerging, hidden: input.hidden, sort })
+        .values({ name, emerging: input.emerging, hidden: input.hidden, logo, sort })
         .returning({ id: tools.id });
     }
     await tx.insert(toolCategories).values(categoryIds.map((categoryId) => ({ toolId: id as string, categoryId })));

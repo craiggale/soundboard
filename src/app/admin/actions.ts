@@ -61,6 +61,7 @@ const toolInput = z.object({
   emerging: z.boolean(),
   hidden: z.boolean(),
   categoryIds: z.array(id).max(50),
+  logo: z.string().max(80),
 });
 const categoryInput = z.object({
   id: id.optional(),

@@ -4,9 +4,10 @@ import { useMemo, useState } from "react";
 import { deleteTool, saveTool } from "@/app/admin/actions";
 import type { AdminCategory, AdminTool } from "@/lib/admin-data";
 import { Chip } from "../share/ui";
+import { LogoTile } from "../ToolLogo";
 import { Badge, Button, ErrorText, Field, Toggle, useAdminAction } from "./ui";
 
-type Draft = { name: string; emerging: boolean; hidden: boolean; categoryIds: string[] };
+type Draft = { name: string; emerging: boolean; hidden: boolean; categoryIds: string[]; logo: string };
 
 export function ToolsEditor({ tools, categories }: { tools: AdminTool[]; categories: AdminCategory[] }) {
   const [query, setQuery] = useState("");
@@ -58,7 +59,7 @@ export function ToolsEditor({ tools, categories }: { tools: AdminTool[]; categor
         <div className="mt-6 border border-brand/60 bg-graphite/60 p-5">
           <ToolForm
             categories={categories}
-            initial={{ name: "", emerging: false, hidden: false, categoryIds: categoryFilter ? [categoryFilter] : [] }}
+            initial={{ name: "", emerging: false, hidden: false, logo: "", categoryIds: categoryFilter ? [categoryFilter] : [] }}
             onDone={() => setAdding(false)}
             submitLabel="Add tool"
           />
@@ -95,7 +96,7 @@ function ToolRow({
         <ToolForm
           id={tool.id}
           categories={categories}
-          initial={tool}
+          initial={{ ...tool, logo: tool.logoSlug }}
           ratings={tool.ratings}
           onDone={() => setEditing(false)}
           submitLabel="Save changes"
@@ -106,6 +107,7 @@ function ToolRow({
 
   return (
     <li className={`flex flex-wrap items-center gap-x-6 gap-y-2 py-3 ${tool.hidden ? "opacity-50" : ""}`}>
+      <LogoTile logo={tool.logo} className="h-9 w-9" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-semibold">{tool.name}</span>
@@ -130,6 +132,7 @@ function ToolRow({
                 emerging: tool.emerging,
                 hidden: !tool.hidden,
                 categoryIds: tool.categoryIds,
+                logo: tool.logoSlug,
               }),
             )
           }
@@ -167,6 +170,7 @@ function ToolForm({
     emerging: initial.emerging,
     hidden: initial.hidden,
     categoryIds: initial.categoryIds,
+    logo: initial.logo,
   });
   const { pending, error, run } = useAdminAction();
   const set = (patch: Partial<Draft>) => setDraft((current) => ({ ...current, ...patch }));
@@ -179,15 +183,38 @@ function ToolForm({
       }}
       className="space-y-5"
     >
-      <Field
-        label="Tool name"
-        value={draft.name}
-        onChange={(event) => set({ name: event.target.value })}
-        maxLength={80}
-        required
-        autoFocus
-        className="max-w-md"
-      />
+      <div className="flex flex-wrap gap-4">
+        <Field
+          label="Tool name"
+          value={draft.name}
+          onChange={(event) => set({ name: event.target.value })}
+          maxLength={80}
+          required
+          autoFocus
+          className="w-full max-w-md"
+        />
+        <div>
+          <Field
+            label="Logo"
+            value={draft.logo}
+            onChange={(event) => set({ logo: event.target.value })}
+            maxLength={80}
+            placeholder="e.g. figma"
+            className="w-48"
+          />
+          <p className="mt-1.5 max-w-xs text-xs text-white/40">
+            A logo name from{" "}
+            <a href="https://lobehub.com/icons" target="_blank" rel="noreferrer" className="underline hover:text-white">
+              LobeHub
+            </a>{" "}
+            or{" "}
+            <a href="https://simpleicons.org" target="_blank" rel="noreferrer" className="underline hover:text-white">
+              Simple Icons
+            </a>
+            . Leave blank for the Accenture placeholder.
+          </p>
+        </div>
+      </div>
       {id && ratings > 0 && initial.name !== draft.name && (
         <p className="text-sm text-white/50">Its {ratings} existing ratings will move to the new name.</p>
       )}
