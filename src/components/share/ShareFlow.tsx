@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { AREAS, BARRIERS, PRACTICES, buildDeck, type AreaId, type Practice } from "@/lib/catalog";
+import { AREAS, BARRIERS, PRACTICES, PRACTICE_SUMMARIES, buildDeck, type AreaId, type Practice } from "@/lib/catalog";
 import { rememberMine } from "@/lib/mine";
 import type { WallItem } from "@/lib/sentence";
 import { BrandMark, Chevron } from "../Chevron";
@@ -103,7 +103,7 @@ export function ShareFlow() {
           <>
             <Eyebrow>Step 1 · About you</Eyebrow>
             <StepTitle>Where do you sit at Song?</StepTitle>
-            <ul className="mt-12 border-t border-white/10">
+            <ul className="mt-10 border-t border-white/10">
               {PRACTICES.map((option, i) => (
                 <li key={option} className="border-b border-white/10">
                   <button
@@ -112,17 +112,20 @@ export function ShareFlow() {
                       setPractice(option);
                       go("areas");
                     }}
-                    className="group flex w-full items-center gap-6 py-6 text-left"
+                    className="group flex w-full items-center gap-6 py-4 text-left"
                   >
-                    <span className="w-8 text-sm tabular-nums text-white/30 transition-colors group-hover:text-brand-soft">
+                    <span className="w-8 shrink-0 text-sm tabular-nums text-white/30 transition-colors group-hover:text-brand-soft">
                       0{i + 1}
                     </span>
-                    <span
-                      className={`text-[clamp(1.6rem,3.4vw,2.75rem)] font-semibold tracking-tight transition-all duration-500 ease-expo group-hover:translate-x-3 ${
-                        practice === option ? "text-brand-soft" : ""
-                      }`}
-                    >
-                      {option}
+                    <span className="transition-transform duration-500 ease-expo group-hover:translate-x-3">
+                      <span
+                        className={`block text-[clamp(1.4rem,2.6vw,2.1rem)] font-semibold leading-tight tracking-tight ${
+                          practice === option ? "text-brand-soft" : ""
+                        }`}
+                      >
+                        {option}
+                      </span>
+                      <span className="mt-0.5 block text-sm text-white/45">{PRACTICE_SUMMARIES[option]}</span>
                     </span>
                     <Chevron className="ml-auto h-7 w-auto -translate-x-4 text-brand opacity-0 transition-all duration-500 ease-expo group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100" />
                   </button>

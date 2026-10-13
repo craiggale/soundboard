@@ -1,5 +1,23 @@
-export const PRACTICES = ["Creative", "Experience", "Customer Technology"] as const;
+export const PRACTICES = [
+  "Customer Growth",
+  "Marketing",
+  "Design & Digital Products",
+  "Commerce",
+  "Sales",
+  "Service",
+  "Customer Data & AI",
+] as const;
 export type Practice = (typeof PRACTICES)[number];
+
+export const PRACTICE_SUMMARIES: Record<Practice, string> = {
+  "Customer Growth": "Industry, strategy & insights",
+  Marketing: "Brands, engagement and loyalty across channels and media",
+  "Design & Digital Products": "Digital services, products and ventures",
+  Commerce: "Growth across commerce channels, from eCommerce to social",
+  Sales: "Turning demand into revenue",
+  Service: "High-value service experiences",
+  "Customer Data & AI": "AI-ready data, real-time insight and personalisation",
+};
 
 export const PURPOSES = [
   { id: "productivity", label: "Everyday productivity" },

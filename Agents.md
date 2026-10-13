@@ -4,7 +4,7 @@
 Soundboard is a lightweight Next.js web app built for Accenture Song. It replaces a standard Microsoft Form with a simple, engaging experience that encourages people to share how they're using AI tools in their day-to-day work.
 
 ## Goal
-Gather insights across Song's Creative, Experience, and Customer Technology practices to help inform where Accenture invests in AI tooling going forward. Specifically:
+Gather insights across Song's UKI practices (Customer Growth, Marketing, Design & Digital Products, Commerce, Sales, Service, and Customer Data & AI) to help inform where Accenture invests in AI tooling going forward. Specifically:
 - Which AI tools are people actually using?
 - Which do they value most?
 - How are they applying them in their work?
