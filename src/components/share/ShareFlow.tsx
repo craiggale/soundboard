@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { AREAS, BARRIERS, PRACTICES, PRACTICE_SUMMARIES, buildDeck, type AreaId, type Practice } from "@/lib/catalog";
+import { areasOf, buildDeck, purposesOf, type Catalog } from "@/lib/catalog";
 import { rememberMine } from "@/lib/mine";
 import type { WallItem } from "@/lib/sentence";
 import { BrandMark, Chevron } from "../Chevron";
@@ -18,14 +18,33 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 const SWIPE = [0.76, 0, 0.24, 1] as const;
 const DONE_CARD_LIMIT = 6;
 
-export function ShareFlow() {
+export function ShareFlow({ catalog }: { catalog: Catalog }) {
+  const [run, setRun] = useState(0);
+  const completed = useRef(false);
+
+  // Next keeps this page alive in the background after navigating away. Once a response is
+  // submitted, start afresh next time; a half-finished flow keeps its progress.
+  useLayoutEffect(
+    () => () => {
+      if (completed.current) {
+        completed.current = false;
+        setRun((n) => n + 1);
+      }
+    },
+    [],
+  );
+
+  return <Flow key={run} catalog={catalog} onComplete={() => (completed.current = true)} />;
+}
+
+function Flow({ catalog, onComplete }: { catalog: Catalog; onComplete: () => void }) {
   const reduce = useReducedMotion();
   const [step, setStep] = useState<Step>("practice");
   const [direction, setDirection] = useState(1);
   const [wipes, setWipes] = useState(0);
 
-  const [practice, setPractice] = useState<Practice | null>(null);
-  const [areas, setAreas] = useState<AreaId[]>([]);
+  const [practice, setPractice] = useState<string | null>(null);
+  const [areas, setAreas] = useState<string[]>([]);
   const [ratings, setRatings] = useState<Record<string, Rating>>({});
   const [barriers, setBarriers] = useState<string[]>([]);
   const [note, setNote] = useState("");
@@ -34,7 +53,9 @@ export function ShareFlow() {
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<WallItem[]>([]);
 
-  const deck = useMemo(() => buildDeck(areas), [areas]);
+  const deck = useMemo(() => buildDeck(catalog, areas), [catalog, areas]);
+  const areaOptions = useMemo(() => areasOf(catalog), [catalog]);
+  const purposes = useMemo(() => purposesOf(catalog), [catalog]);
   const usesAny = Object.values(ratings).some((r) => r.verdict === "uses");
 
   function go(next: Step, dir = 1) {
@@ -74,6 +95,7 @@ export function ShareFlow() {
       const items: WallItem[] = data.items ?? [];
       rememberMine(items.map((item) => item.id));
       setCreated(items);
+      onComplete();
       go("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -104,7 +126,7 @@ export function ShareFlow() {
             <Eyebrow>Step 1 · About you</Eyebrow>
             <StepTitle>Where do you sit at Song?</StepTitle>
             <ul className="mt-10 border-t border-white/10">
-              {PRACTICES.map((option, i) => (
+              {catalog.practices.map(({ name: option, summary }, i) => (
                 <li key={option} className="border-b border-white/10">
                   <button
                     type="button"
@@ -115,7 +137,7 @@ export function ShareFlow() {
                     className="group flex w-full items-center gap-6 py-4 text-left"
                   >
                     <span className="w-8 shrink-0 text-sm tabular-nums text-white/30 transition-colors group-hover:text-brand-soft">
-                      0{i + 1}
+                      {String(i + 1).padStart(2, "0")}
                     </span>
                     <span className="transition-transform duration-500 ease-expo group-hover:translate-x-3">
                       <span
@@ -125,7 +147,7 @@ export function ShareFlow() {
                       >
                         {option}
                       </span>
-                      <span className="mt-0.5 block text-sm text-white/45">{PRACTICE_SUMMARIES[option]}</span>
+                      <span className="mt-0.5 block text-sm text-white/45">{summary}</span>
                     </span>
                     <Chevron className="ml-auto h-7 w-auto -translate-x-4 text-brand opacity-0 transition-all duration-500 ease-expo group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100" />
                   </button>
@@ -145,7 +167,7 @@ export function ShareFlow() {
               and the tools emerging at Song.
             </p>
             <div className="mt-10 flex flex-wrap gap-2.5">
-              {AREAS.map((area) => {
+              {areaOptions.map((area) => {
                 const selected = areas.includes(area.id);
                 return (
                   <Chip
@@ -191,6 +213,7 @@ export function ShareFlow() {
             </div>
             <SwipeDeck
               deck={deck}
+              purposes={purposes}
               ratings={ratings}
               onRate={rate}
               finishing={saving}
@@ -206,7 +229,7 @@ export function ShareFlow() {
             <StepTitle>Fair enough. What&apos;s held you back so far?</StepTitle>
             <p className="mt-5 text-lg text-white/55">Pick any that apply. This is just as useful to us.</p>
             <div className="mt-10 flex flex-wrap gap-2.5">
-              {BARRIERS.map((barrier) => (
+              {catalog.barriers.map((barrier) => (
                 <Chip
                   key={barrier}
                   selected={barriers.includes(barrier)}

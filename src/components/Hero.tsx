@@ -77,8 +77,8 @@ export function Hero() {
         <Link href="/wall" className="transition-colors hover:text-white">
           Presentation mode
         </Link>
-        <Link href="/insights" className="transition-colors hover:text-white">
-          Insights
+        <Link href="/admin" className="transition-colors hover:text-white">
+          Admin
         </Link>
       </motion.nav>
     </section>

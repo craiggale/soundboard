@@ -9,12 +9,12 @@ import {
   useTransform,
   type MotionValue,
 } from "motion/react";
-import { PURPOSES, purposeLabel, type PurposeId, type Tool, type Verdict } from "@/lib/catalog";
+import type { CatalogTool, Purpose, Verdict } from "@/lib/catalog";
 import { Chevron } from "../Chevron";
 import { ImpactPicker } from "./ImpactPicker";
 import { Chip, GhostButton, PrimaryButton } from "./ui";
 
-export type Rating = { verdict: Verdict; impact?: number; purposes?: PurposeId[] };
+export type Rating = { verdict: Verdict; impact?: number; purposes?: string[] };
 type Exit = "left" | "right" | "up" | "back";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -36,14 +36,16 @@ const exitVariants = {
 };
 
 type Props = {
-  deck: Tool[];
+  deck: CatalogTool[];
+  purposes: Purpose[];
   ratings: Record<string, Rating>;
   onRate: (tool: string, rating: Rating | null) => void;
   onFinish: () => void;
   finishing: boolean;
 };
 
-export function SwipeDeck({ deck, ratings, onRate, onFinish, finishing }: Props) {
+export function SwipeDeck({ deck, purposes, ratings, onRate, onFinish, finishing }: Props) {
+  const purposeLabels = new Map(purposes.map((p) => [p.id, p.label]));
   const reduce = useReducedMotion();
   const [exit, setExit] = useState<Exit>("left");
   const [flipped, setFlipped] = useState(false);
@@ -65,7 +67,7 @@ export function SwipeDeck({ deck, ratings, onRate, onFinish, finishing }: Props)
     onRate(current.name, { verdict });
   }
 
-  function confirmUse(rating: { impact: number; purposes: PurposeId[] }) {
+  function confirmUse(rating: { impact: number; purposes: string[] }) {
     if (!current) return;
     setExit("right");
     setFlipped(false);
@@ -112,7 +114,7 @@ export function SwipeDeck({ deck, ratings, onRate, onFinish, finishing }: Props)
             className="absolute inset-0 transition-transform duration-500 ease-expo"
             style={{ transform: `translateY(${(i + 1) * 24}px) scale(${1 - (i + 1) * 0.045})`, filter: `brightness(${0.7 - i * 0.25})`, zIndex: 2 - i }}
           >
-            <CardFront tool={tool} />
+            <CardFront tool={tool} purposeLabels={purposeLabels} />
           </div>
         ))}
 
@@ -121,6 +123,8 @@ export function SwipeDeck({ deck, ratings, onRate, onFinish, finishing }: Props)
             <SwipeCard
               key={current.name}
               tool={current}
+              purposes={purposes}
+              purposeLabels={purposeLabels}
               flipped={flipped}
               reduce={Boolean(reduce)}
               onDecide={decide}
@@ -171,7 +175,7 @@ export function SwipeDeck({ deck, ratings, onRate, onFinish, finishing }: Props)
           <GhostButton onClick={undo} disabled={history.current.length === 0} className="disabled:opacity-30">
             Undo
           </GhostButton>
-          {current && rated > 0 && <GhostButton onClick={onFinish}>I<GhostButton onClick={onFinish}>Skip the rest</GhostButton>apos;m done</GhostButton>}
+          {current && rated > 0 && <GhostButton onClick={onFinish}>I&apos;m done</GhostButton>}
         </div>
       </div>
     </div>
@@ -204,16 +208,20 @@ function DeckButton({
 
 function CardFront({
   tool,
+  purposeLabels,
   useOpacity,
   nopeOpacity,
   unawareOpacity,
 }: {
-  tool: Tool;
+  tool: CatalogTool;
+  purposeLabels: Map<string, string>;
   useOpacity?: MotionValue<number>;
   nopeOpacity?: MotionValue<number>;
   unawareOpacity?: MotionValue<number>;
 }) {
-  const purposeText = tool.purposes.length ? tool.purposes.map(purposeLabel).join(" · ") : "General-purpose assistant";
+  const purposeText = tool.categoryIds.length
+    ? tool.categoryIds.map((id) => purposeLabels.get(id) ?? id).join(" · ")
+    : "General-purpose assistant";
   return (
     <div className="relative flex h-full flex-col overflow-hidden border border-white/12 bg-gradient-to-br from-[#1f1f1f] via-[#121212] to-ink p-7 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.9)]">
       <div
@@ -272,17 +280,21 @@ function Stamp({ opacity, className, children }: { opacity: MotionValue<number>;
 
 function SwipeCard({
   tool,
+  purposes,
+  purposeLabels,
   flipped,
   reduce,
   onDecide,
   onConfirm,
   onCancel,
 }: {
-  tool: Tool;
+  tool: CatalogTool;
+  purposes: Purpose[];
+  purposeLabels: Map<string, string>;
   flipped: boolean;
   reduce: boolean;
   onDecide: (verdict: Verdict) => void;
-  onConfirm: (rating: { impact: number; purposes: PurposeId[] }) => void;
+  onConfirm: (rating: { impact: number; purposes: string[] }) => void;
   onCancel: () => void;
 }) {
   const x = useMotionValue(0);
@@ -292,7 +304,7 @@ function SwipeCard({
   const nopeOpacity = useTransform(x, [-THRESHOLD, -30], [1, 0]);
   const unawareOpacity = useTransform(y, [-THRESHOLD, -30], [1, 0]);
 
-  const [purposes, setPurposes] = useState<PurposeId[]>(tool.purposes);
+  const [chosen, setChosen] = useState<string[]>(tool.categoryIds);
   const [impact, setImpact] = useState<number | null>(null);
 
   return (
@@ -320,7 +332,7 @@ function SwipeCard({
         transition={{ duration: reduce ? 0 : 0.75, ease: EASE }}
       >
         <div className="absolute inset-0 [-webkit-backface-visibility:hidden] [backface-visibility:hidden]">
-          <CardFront tool={tool} useOpacity={useOpacity} nopeOpacity={nopeOpacity} unawareOpacity={unawareOpacity} />
+          <CardFront tool={tool} purposeLabels={purposeLabels} useOpacity={useOpacity} nopeOpacity={nopeOpacity} unawareOpacity={unawareOpacity} />
         </div>
 
         <div
@@ -334,15 +346,15 @@ function SwipeCard({
           </p>
           <h3 className="mt-2 text-xl font-semibold leading-tight tracking-[-0.02em]">What do you use it for?</h3>
           <div className="mt-3 flex flex-wrap gap-1">
-            {PURPOSES.map((purpose) => {
-              const selected = purposes.includes(purpose.id);
+            {purposes.map((purpose) => {
+              const selected = chosen.includes(purpose.id);
               return (
                 <Chip
                   key={purpose.id}
                   size="sm"
                   selected={selected}
                   onClick={() =>
-                    setPurposes((current) =>
+                    setChosen((current) =>
                       selected ? current.filter((p) => p !== purpose.id) : [...current, purpose.id],
                     )
                   }
@@ -358,8 +370,8 @@ function SwipeCard({
           <div className="sticky bottom-0 -mx-5 mt-auto flex items-center justify-between gap-4 border-t border-white/10 bg-graphite px-5 py-4">
             <GhostButton onClick={onCancel}>Back</GhostButton>
             <PrimaryButton
-              disabled={!impact || purposes.length === 0}
-              onClick={() => impact && onConfirm({ impact, purposes })}
+              disabled={!impact || chosen.length === 0}
+              onClick={() => impact && onConfirm({ impact, purposes: chosen })}
             >
               Next
             </PrimaryButton>

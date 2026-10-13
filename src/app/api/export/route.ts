@@ -1,5 +1,5 @@
-import { purposeLabel, toolByName } from "@/lib/catalog";
-import { getAllResponses } from "@/lib/data";
+import { isAdmin } from "@/lib/admin-auth";
+import { getAllResponses, getLabels, getToolCategoryNames } from "@/lib/data";
 
 const HEADERS = [
   "response_id",
@@ -22,10 +22,12 @@ function cell(value: string | number | null | undefined): string {
   return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
-const labels = (ids: string[]) => ids.map(purposeLabel).join("; ");
-
 export async function GET() {
-  const responses = await getAllResponses();
+  if (!(await isAdmin())) return new Response("Sign in at /admin to download responses.", { status: 401 });
+
+  const [responses, { purposes }, toolCategory] = await Promise.all([getAllResponses(), getLabels(), getToolCategoryNames()]);
+  const purposeLabels = new Map(purposes.map((p) => [p.id, p.label]));
+  const labels = (ids: string[]) => ids.map((id) => purposeLabels.get(id) ?? id).join("; ");
   const lines = [HEADERS.join(",")];
 
   for (const response of responses) {
@@ -40,7 +42,7 @@ export async function GET() {
         [
           ...base,
           rating.tool,
-          toolByName(rating.tool)?.category ?? "",
+          toolCategory.get(rating.tool) ?? "",
           rating.verdict,
           rating.impact,
           labels(rating.purposes),

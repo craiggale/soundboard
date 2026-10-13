@@ -1,4 +1,4 @@
-import { createSubmission } from "@/lib/data";
+import { createSubmission, SubmissionError } from "@/lib/data";
 import { submissionSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -17,6 +17,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const items = await createSubmission(parsed.data);
-  return Response.json({ items }, { status: 201 });
+  try {
+    const items = await createSubmission(parsed.data);
+    return Response.json({ items }, { status: 201 });
+  } catch (error) {
+    if (error instanceof SubmissionError) {
+      return Response.json({ error: error.message }, { status: 400 });
+    }
+    throw error;
+  }
 }

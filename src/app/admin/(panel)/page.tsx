@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
-import { BrandMark, Chevron } from "@/components/Chevron";
+import { Chevron } from "@/components/Chevron";
 import { BarList } from "@/components/insights/BarList";
-import { PRACTICES } from "@/lib/catalog";
-import { getAllResponses } from "@/lib/data";
+import { requireAdmin } from "@/lib/admin-auth";
+import { getAllResponses, getLabels } from "@/lib/data";
 import { computeInsights } from "@/lib/insights";
 
 export const metadata: Metadata = {
@@ -35,12 +35,14 @@ function Stat({ label, value, note }: { label: string; value: string; note?: str
   );
 }
 
-async function InsightsContent({ searchParams }: Pick<PageProps<"/insights">, "searchParams">) {
-  const { practice: param } = await searchParams;
-  const practice = PRACTICES.find((p) => p === param);
-  const data = computeInsights(await getAllResponses(), practice);
+async function InsightsContent({ searchParams }: Pick<PageProps<"/admin">, "searchParams">) {
+  await requireAdmin();
+  const [{ practice: param }, responses, labels] = await Promise.all([searchParams, getAllResponses(), getLabels()]);
+  const practiceNames = [...new Set([...labels.practices, ...responses.map((r) => r.practice)])];
+  const practice = practiceNames.find((p) => p === param);
+  const data = computeInsights(responses, labels, practice);
 
-  const filters = [{ label: "All of Song", value: undefined }, ...PRACTICES.map((p) => ({ label: p, value: p }))];
+  const filters = [{ label: "All of Song", value: undefined }, ...practiceNames.map((p) => ({ label: p, value: p }))];
 
   return (
     <>
@@ -50,7 +52,7 @@ async function InsightsContent({ searchParams }: Pick<PageProps<"/insights">, "s
           return (
             <Link
               key={filter.label}
-              href={filter.value ? `/insights?practice=${encodeURIComponent(filter.value)}` : "/insights"}
+              href={filter.value ? `/admin?practice=${encodeURIComponent(filter.value)}` : "/admin"}
               aria-current={active ? "page" : undefined}
               className={`border px-4 py-2 text-sm font-medium transition-colors ${
                 active ? "border-brand bg-brand text-white" : "border-white/15 text-white/70 hover:border-brand-soft hover:text-white"
@@ -202,13 +204,13 @@ async function InsightsContent({ searchParams }: Pick<PageProps<"/insights">, "s
   );
 }
 
-export default function InsightsPage({ searchParams }: PageProps<"/insights">) {
+export default function InsightsPage({ searchParams }: PageProps<"/admin">) {
   return (
-    <main className="mx-auto max-w-7xl px-6 py-8 sm:px-10 lg:px-14">
-      <header className="flex items-center justify-between gap-6">
-        <Link href="/" aria-label="Soundboard home">
-          <BrandMark />
-        </Link>
+    <>
+      <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
+        <h1 className="max-w-3xl text-[clamp(2rem,4.5vw,3.5rem)] font-semibold leading-[1.02] tracking-[-0.035em]">
+          What Song is telling us about <span className="text-brand">AI</span>.
+        </h1>
         <a
           href="/api/export"
           className="group inline-flex items-center gap-3 border border-white/20 px-4 py-2.5 text-sm font-medium transition-colors hover:border-brand hover:bg-brand"
@@ -216,18 +218,10 @@ export default function InsightsPage({ searchParams }: PageProps<"/insights">) {
           Download CSV
           <Chevron className="h-2.5 w-auto text-brand-soft transition-colors group-hover:text-white" />
         </a>
-      </header>
-
-      <div className="mt-16 mb-10">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-brand-soft">Insights</p>
-        <h1 className="max-w-3xl text-[clamp(2.25rem,5vw,4rem)] font-semibold leading-[1.02] tracking-[-0.035em]">
-          What Song is telling us about <span className="text-brand">AI</span>.
-        </h1>
       </div>
-
       <Suspense fallback={<p className="text-white/40">Loading insights…</p>}>
         <InsightsContent searchParams={searchParams} />
       </Suspense>
-    </main>
+    </>
   );
 }

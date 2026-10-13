@@ -1,5 +1,3 @@
-import { purposeLabel } from "./catalog";
-
 export type WallItem = {
   id: string;
   tool: string;
@@ -9,8 +7,8 @@ export type WallItem = {
   createdAt: string;
 };
 
-export function purposePhrase(purposes: string[]): string {
-  const labels = purposes.map((id) => purposeLabel(id).toLowerCase());
-  if (labels.length <= 1) return labels[0] ?? "";
-  return `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}`;
+export function purposePhrase(labels: string[]): string {
+  const lower = labels.map((label) => label.toLowerCase());
+  if (lower.length <= 1) return lower[0] ?? "";
+  return `${lower.slice(0, -1).join(", ")} and ${lower.at(-1)}`;
 }

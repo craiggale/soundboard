@@ -1,4 +1,4 @@
-import { BARRIERS, PRACTICES, PURPOSES, toolByName } from "./catalog";
+import type { Purpose } from "./catalog";
 import type { ResponseRecord } from "./data";
 
 export type ToolStat = {
@@ -25,13 +25,15 @@ export type Insights = {
   practices: CountStat[];
 };
 
-export function computeInsights(all: ResponseRecord[], practice?: string): Insights {
+type Labels = { purposes: Purpose[]; practices: string[]; barriers: string[]; emerging: Set<string> };
+
+export function computeInsights(all: ResponseRecord[], labels: Labels, practice?: string): Insights {
   const scoped = practice ? all.filter((r) => r.practice === practice) : all;
   const usesAi = (r: ResponseRecord) => r.ratings.some((rating) => rating.verdict === "uses");
   const users = scoped.filter(usesAi);
 
   const tools = new Map<string, { shown: number; users: number; unaware: number; impact: number }>();
-  const purposes = new Map<string, Map<string, number>>(PURPOSES.map((p) => [p.id, new Map()]));
+  const purposes = new Map<string, Map<string, number>>(labels.purposes.map((p) => [p.id, new Map()]));
   let toolUses = 0;
 
   for (const response of scoped) {
@@ -55,7 +57,7 @@ export function computeInsights(all: ResponseRecord[], practice?: string): Insig
   const toolStats: ToolStat[] = [...tools.entries()]
     .map(([name, entry]) => ({
       name,
-      emerging: toolByName(name)?.emerging ?? false,
+      emerging: labels.emerging.has(name),
       shown: entry.shown,
       users: entry.users,
       unaware: entry.unaware,
@@ -65,7 +67,7 @@ export function computeInsights(all: ResponseRecord[], practice?: string): Insig
     }))
     .sort((a, b) => b.users - a.users || b.avgImpact - a.avgImpact);
 
-  const purposeStats: PurposeStat[] = PURPOSES.map((p) => {
+  const purposeStats: PurposeStat[] = labels.purposes.map((p) => {
     const byTool = purposes.get(p.id) ?? new Map<string, number>();
     const ranked = [...byTool.entries()].sort((a, b) => b[1] - a[1]);
     return {
@@ -78,7 +80,7 @@ export function computeInsights(all: ResponseRecord[], practice?: string): Insig
     .filter((p) => p.count > 0)
     .sort((a, b) => b.count - a.count);
 
-  const barrierCounts = new Map<string, number>(BARRIERS.map((b) => [b, 0]));
+  const barrierCounts = new Map<string, number>(labels.barriers.map((b) => [b, 0]));
   for (const response of scoped.filter((r) => !usesAi(r))) {
     for (const barrier of response.barriers) {
       barrierCounts.set(barrier, (barrierCounts.get(barrier) ?? 0) + 1);
@@ -96,7 +98,7 @@ export function computeInsights(all: ResponseRecord[], practice?: string): Insig
       .map(([name, count]) => ({ name, count }))
       .filter((b) => b.count > 0)
       .sort((a, b) => b.count - a.count),
-    practices: PRACTICES.map((name) => ({
+    practices: [...new Set([...labels.practices, ...all.map((r) => r.practice)])].map((name) => ({
       name,
       count: all.filter((r) => r.practice === name).length,
     })),
