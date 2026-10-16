@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { VERDICTS } from "./catalog";
+import { ACCESS_IDS, VERDICTS } from "./catalog";
 
 // Shape only. Values are checked against the live catalogue when the response is saved.
 const rating = z
@@ -8,6 +8,7 @@ const rating = z
     verdict: z.enum(VERDICTS),
     impact: z.number().int().min(1).max(5).optional(),
     purposes: z.array(z.string().max(80)).max(40).optional(),
+    access: z.enum(ACCESS_IDS).optional(),
   })
   .refine((r) => r.verdict !== "uses" || (r.impact && r.purposes?.length), {
     message: "Tools you use need a purpose and a rating.",

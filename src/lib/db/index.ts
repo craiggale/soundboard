@@ -2,8 +2,15 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import * as schema from "./schema";
-import { and, eq, isNull } from "drizzle-orm";
-import { SEED_BARRIERS, SEED_CATEGORIES, SEED_EMERGING, SEED_LOGOS, SEED_PRACTICES } from "./seed";
+import { and, eq, inArray, isNull } from "drizzle-orm";
+import {
+  SEED_ACCENTURE_ONLY,
+  SEED_BARRIERS,
+  SEED_CATEGORIES,
+  SEED_EMERGING,
+  SEED_LOGOS,
+  SEED_PRACTICES,
+} from "./seed";
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
@@ -85,6 +92,16 @@ async function seedOnce(db: Db): Promise<Db> {
         .set({ logo: slug })
         .where(and(eq(schema.tools.name, name), isNull(schema.tools.logo)));
     }
+  });
+
+  await db.transaction(async (tx) => {
+    const claimed = await tx
+      .insert(schema.appMeta)
+      .values({ key: "access_seeded_v1", value: new Date().toISOString() })
+      .onConflictDoNothing()
+      .returning();
+    if (!claimed.length) return;
+    await tx.update(schema.tools).set({ askAccess: false }).where(inArray(schema.tools.name, SEED_ACCENTURE_ONLY));
   });
   return db;
 }

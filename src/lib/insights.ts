@@ -10,6 +10,9 @@ export type ToolStat = {
   adoption: number;
   unawareRate: number;
   avgImpact: number;
+  enterprise: number;
+  personal: number;
+  unsureAccess: number;
 };
 export type PurposeStat = { id: string; label: string; count: number; topTools: { name: string; count: number }[] };
 export type CountStat = { name: string; count: number };
@@ -19,6 +22,7 @@ export type Insights = {
   usingAi: number;
   notUsingAi: number;
   toolUses: number;
+  access: { enterprise: number; personal: number; unsure: number };
   tools: ToolStat[];
   purposes: PurposeStat[];
   barriers: CountStat[];
@@ -32,18 +36,26 @@ export function computeInsights(all: ResponseRecord[], labels: Labels, practice?
   const usesAi = (r: ResponseRecord) => r.ratings.some((rating) => rating.verdict === "uses");
   const users = scoped.filter(usesAi);
 
-  const tools = new Map<string, { shown: number; users: number; unaware: number; impact: number }>();
+  const tools = new Map<
+    string,
+    { shown: number; users: number; unaware: number; impact: number; enterprise: number; personal: number; unsure: number }
+  >();
+  const access = { enterprise: 0, personal: 0, unsure: 0 };
   const purposes = new Map<string, Map<string, number>>(labels.purposes.map((p) => [p.id, new Map()]));
   let toolUses = 0;
 
   for (const response of scoped) {
     for (const rating of response.ratings) {
-      const entry = tools.get(rating.tool) ?? { shown: 0, users: 0, unaware: 0, impact: 0 };
+      const entry = tools.get(rating.tool) ?? { shown: 0, users: 0, unaware: 0, impact: 0, enterprise: 0, personal: 0, unsure: 0 };
       entry.shown += 1;
       if (rating.verdict === "unaware") entry.unaware += 1;
       if (rating.verdict === "uses") {
         entry.users += 1;
         entry.impact += rating.impact ?? 0;
+        if (rating.access === "enterprise" || rating.access === "personal" || rating.access === "unsure") {
+          entry[rating.access] += 1;
+          access[rating.access] += 1;
+        }
         toolUses += 1;
         for (const purpose of rating.purposes) {
           const byTool = purposes.get(purpose);
@@ -64,6 +76,9 @@ export function computeInsights(all: ResponseRecord[], labels: Labels, practice?
       adoption: entry.users / entry.shown,
       unawareRate: entry.unaware / entry.shown,
       avgImpact: entry.users ? entry.impact / entry.users : 0,
+      enterprise: entry.enterprise,
+      personal: entry.personal,
+      unsureAccess: entry.unsure,
     }))
     .sort((a, b) => b.users - a.users || b.avgImpact - a.avgImpact);
 
@@ -92,6 +107,7 @@ export function computeInsights(all: ResponseRecord[], labels: Labels, practice?
     usingAi: users.length,
     notUsingAi: scoped.length - users.length,
     toolUses,
+    access,
     tools: toolStats,
     purposes: purposeStats,
     barriers: [...barrierCounts.entries()]

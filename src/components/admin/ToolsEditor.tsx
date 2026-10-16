@@ -7,7 +7,7 @@ import { Chip } from "../share/ui";
 import { LogoTile } from "../ToolLogo";
 import { Badge, Button, ErrorText, Field, Toggle, useAdminAction } from "./ui";
 
-type Draft = { name: string; emerging: boolean; hidden: boolean; categoryIds: string[]; logo: string };
+type Draft = { name: string; emerging: boolean; hidden: boolean; categoryIds: string[]; logo: string; askAccess: boolean };
 
 export function ToolsEditor({ tools, categories }: { tools: AdminTool[]; categories: AdminCategory[] }) {
   const [query, setQuery] = useState("");
@@ -59,7 +59,7 @@ export function ToolsEditor({ tools, categories }: { tools: AdminTool[]; categor
         <div className="mt-6 border border-brand/60 bg-graphite/60 p-5">
           <ToolForm
             categories={categories}
-            initial={{ name: "", emerging: false, hidden: false, logo: "", categoryIds: categoryFilter ? [categoryFilter] : [] }}
+            initial={{ name: "", emerging: false, hidden: false, logo: "", askAccess: true, categoryIds: categoryFilter ? [categoryFilter] : [] }}
             onDone={() => setAdding(false)}
             submitLabel="Add tool"
           />
@@ -133,6 +133,7 @@ function ToolRow({
                 hidden: !tool.hidden,
                 categoryIds: tool.categoryIds,
                 logo: tool.logoSlug,
+                askAccess: tool.askAccess,
               }),
             )
           }
@@ -171,6 +172,7 @@ function ToolForm({
     hidden: initial.hidden,
     categoryIds: initial.categoryIds,
     logo: initial.logo,
+    askAccess: initial.askAccess,
   });
   const { pending, error, run } = useAdminAction();
   const set = (patch: Partial<Draft>) => setDraft((current) => ({ ...current, ...patch }));
@@ -250,6 +252,11 @@ function ToolForm({
       <div className="flex flex-wrap gap-6">
         <Toggle label="Emerging at Song (shown first, with a badge)" checked={draft.emerging} onChange={(emerging) => set({ emerging })} />
         <Toggle label="Hidden from the deck" checked={draft.hidden} onChange={(hidden) => set({ hidden })} />
+        <Toggle
+          label="Ask whether it's Accenture-provided or a personal account"
+          checked={draft.askAccess}
+          onChange={(askAccess) => set({ askAccess })}
+        />
       </div>
       {error && <ErrorText>{error}</ErrorText>}
       <div className="flex flex-wrap items-center gap-3">

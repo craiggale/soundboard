@@ -16,6 +16,7 @@ export type CatalogTool = {
   emerging: boolean;
   alwaysShown: boolean;
   logo: Logo;
+  askAccess: boolean;
 };
 
 export type CatalogPractice = { name: string; summary: string };
@@ -49,6 +50,15 @@ export function buildDeck(catalog: Catalog, areas: string[]): CatalogTool[] {
   );
   return [...relevant.filter((t) => t.emerging), ...relevant.filter((t) => !t.emerging)];
 }
+
+export const ACCESS_OPTIONS = [
+  { id: "enterprise", label: "Accenture-provided" },
+  // An unticked box: personal, free, unsure or simply not ticked.
+  { id: "personal", label: "Not Accenture-provided" },
+  { id: "unsure", label: "Not sure" },
+] as const;
+export type Access = (typeof ACCESS_OPTIONS)[number]["id"];
+export const ACCESS_IDS = ACCESS_OPTIONS.map((a) => a.id) as [Access, ...Access[]];
 
 export const VERDICTS = ["uses", "not_used", "unaware"] as const;
 export type Verdict = (typeof VERDICTS)[number];

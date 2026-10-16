@@ -46,6 +46,7 @@ function toCatalog(raw: Raw): Catalog {
           emerging: t.emerging,
           alwaysShown: linked.some((c) => c.alwaysShown),
           logo: resolveLogo(t.logo),
+          askAccess: t.askAccess,
         },
         order: [categoryIndex.get(ids[0])!, t.sort] as const,
       };
@@ -149,6 +150,7 @@ export async function createSubmission(submission: Submission): Promise<WallItem
 
   // The catalogue can change mid-session, so drop anything that no longer exists rather than rejecting.
   const toolNames = new Set(catalog.tools.map((t) => t.name));
+  const asksAccess = new Set(catalog.tools.filter((t) => t.askAccess).map((t) => t.name));
   const purposeIds = new Set(purposesOf(catalog).map((p) => p.id));
   const ratings = submission.ratings
     .filter((r) => toolNames.has(r.tool))
@@ -183,6 +185,7 @@ export async function createSubmission(submission: Submission): Promise<WallItem
           verdict: r.verdict,
           impact: r.verdict === "uses" ? r.impact : null,
           purposes: r.verdict === "uses" ? r.purposes : [],
+          access: r.verdict === "uses" && asksAccess.has(r.tool) ? (r.access ?? null) : null,
         })),
       )
       .returning({
@@ -209,7 +212,7 @@ export type ResponseRecord = {
   barriers: string[];
   barrierNote: string | null;
   createdAt: Date;
-  ratings: { tool: string; verdict: string; impact: number | null; purposes: string[] }[];
+  ratings: { tool: string; verdict: string; impact: number | null; purposes: string[]; access: string | null }[];
 };
 
 export async function getAllResponses(): Promise<ResponseRecord[]> {
@@ -229,6 +232,7 @@ export async function getAllResponses(): Promise<ResponseRecord[]> {
       verdict: row.verdict,
       impact: row.impact,
       purposes: row.purposes,
+      access: row.access,
     });
   }
   return [...byResponse.values()];

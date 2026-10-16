@@ -16,6 +16,7 @@ export type AdminTool = {
   ratings: number;
   logoSlug: string;
   logo: Logo;
+  askAccess: boolean;
 };
 export type AdminCategory = {
   id: string;
@@ -67,6 +68,7 @@ export async function getAdminData(): Promise<AdminData> {
       ratings: ratingsByTool.get(t.name) ?? 0,
       logoSlug: t.logo ?? "",
       logo: resolveLogo(t.logo),
+      askAccess: t.askAccess,
     })),
     categories: categoryRows.map((c) => ({
       id: c.id,
@@ -112,6 +114,7 @@ export type ToolInput = {
   hidden: boolean;
   categoryIds: string[];
   logo: string;
+  askAccess: boolean;
 };
 
 export async function saveTool(input: ToolInput) {
@@ -139,7 +142,7 @@ export async function saveTool(input: ToolInput) {
     if (id) {
       const [existing] = await tx.select({ name: tools.name }).from(tools).where(eq(tools.id, id));
       if (!existing) throw new AdminError("That tool no longer exists.");
-      await tx.update(tools).set({ name, emerging: input.emerging, hidden: input.hidden, logo }).where(eq(tools.id, id));
+      await tx.update(tools).set({ name, emerging: input.emerging, hidden: input.hidden, logo, askAccess: input.askAccess }).where(eq(tools.id, id));
       if (existing.name !== name) {
         await tx.update(toolRatings).set({ tool: name }).where(eq(toolRatings.tool, existing.name));
       }
@@ -147,7 +150,7 @@ export async function saveTool(input: ToolInput) {
     } else {
       [{ id }] = await tx
         .insert(tools)
-        .values({ name, emerging: input.emerging, hidden: input.hidden, logo, sort })
+        .values({ name, emerging: input.emerging, hidden: input.hidden, logo, askAccess: input.askAccess, sort })
         .returning({ id: tools.id });
     }
     await tx.insert(toolCategories).values(categoryIds.map((categoryId) => ({ toolId: id as string, categoryId })));

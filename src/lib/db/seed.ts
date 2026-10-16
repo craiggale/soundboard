@@ -166,3 +166,17 @@ export const SEED_LOGOS: Record<string, string> = {
   "Amazon Q Developer": "aws",
   Lovable: "lovable",
 };
+
+// Accenture-built tools only come as the official version, so we don't ask which version people use.
+export const SEED_ACCENTURE_ONLY = [
+  "Amethyst",
+  "Amethyst Studio",
+  "Generate Insights",
+  "Reinvention AI",
+  "Song.AI",
+  "Song Workbench",
+  "LING.AI",
+  "AdTune",
+  "Marketing Investment Navigator",
+  "Deep Research Agent",
+];

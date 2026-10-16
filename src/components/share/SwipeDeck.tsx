@@ -9,13 +9,13 @@ import {
   useTransform,
   type MotionValue,
 } from "motion/react";
-import type { CatalogTool, Purpose, Verdict } from "@/lib/catalog";
+import type { Access, CatalogTool, Purpose, Verdict } from "@/lib/catalog";
 import { Chevron } from "../Chevron";
 import { LogoMark, LogoTile } from "../ToolLogo";
 import { ImpactPicker } from "./ImpactPicker";
 import { Chip, GhostButton, PrimaryButton } from "./ui";
 
-export type Rating = { verdict: Verdict; impact?: number; purposes?: string[] };
+export type Rating = { verdict: Verdict; impact?: number; purposes?: string[]; access?: Access };
 type Exit = "left" | "right" | "up" | "back";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -68,7 +68,7 @@ export function SwipeDeck({ deck, purposes, ratings, onRate, onFinish, finishing
     onRate(current.name, { verdict });
   }
 
-  function confirmUse(rating: { impact: number; purposes: string[] }) {
+  function confirmUse(rating: { impact: number; purposes: string[]; access?: Access }) {
     if (!current) return;
     setExit("right");
     setFlipped(false);
@@ -104,7 +104,7 @@ export function SwipeDeck({ deck, purposes, ratings, onRate, onFinish, finishing
     <div>
       <div
         className={`relative mx-auto w-full max-w-[380px] transition-[height] duration-500 ease-expo ${
-          flipped ? "h-[min(78dvh,620px)]" : "h-[min(58dvh,460px)] sm:h-[min(66dvh,506px)]"
+          flipped ? "h-[min(78dvh,620px)] sm:h-[min(86dvh,680px)]" : "h-[min(58dvh,460px)] sm:h-[min(66dvh,506px)]"
         }`}
         style={{ perspective: 1400 }}
       >
@@ -295,7 +295,7 @@ function SwipeCard({
   flipped: boolean;
   reduce: boolean;
   onDecide: (verdict: Verdict) => void;
-  onConfirm: (rating: { impact: number; purposes: string[] }) => void;
+  onConfirm: (rating: { impact: number; purposes: string[]; access?: Access }) => void;
   onCancel: () => void;
 }) {
   const x = useMotionValue(0);
@@ -307,6 +307,8 @@ function SwipeCard({
 
   const [chosen, setChosen] = useState<string[]>(tool.categoryIds);
   const [impact, setImpact] = useState<number | null>(null);
+  const [provided, setProvided] = useState(false);
+  const ready = Boolean(impact) && chosen.length > 0;
 
   return (
     <motion.div
@@ -365,14 +367,37 @@ function SwipeCard({
               );
             })}
           </div>
+          {tool.askAccess && (
+            <label className="mt-5 flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={provided}
+                onChange={(event) => setProvided(event.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#a100ff]"
+              />
+              <span>
+                <span className="block text-sm font-medium text-white/85">Accenture-provided version</span>
+                <span className="mt-0.5 block text-xs text-white/40">
+                  Tick if you use it through an Accenture licence or account. Anonymous, and never shown on the board.
+                </span>
+              </span>
+            </label>
+          )}
           <div className="mt-6">
             <ImpactPicker legend="How much would you miss it?" value={impact} onChange={setImpact} />
           </div>
           <div className="sticky bottom-0 -mx-5 mt-auto flex items-center justify-between gap-4 border-t border-white/10 bg-graphite px-5 py-4">
             <GhostButton onClick={onCancel}>Back</GhostButton>
             <PrimaryButton
-              disabled={!impact || chosen.length === 0}
-              onClick={() => impact && onConfirm({ impact, purposes: chosen })}
+              disabled={!ready}
+              onClick={() =>
+                impact &&
+                onConfirm({
+                  impact,
+                  purposes: chosen,
+                  access: tool.askAccess ? ((provided ? "enterprise" : "personal") satisfies Access) : undefined,
+                })
+              }
             >
               Next
             </PrimaryButton>

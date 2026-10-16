@@ -19,6 +19,7 @@ export const toolRatings = pgTable("tool_ratings", {
   verdict: text("verdict").notNull(),
   impact: smallint("impact"),
   purposes: text("purposes").array().notNull().default(sql`'{}'`),
+  access: text("access"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -38,6 +39,7 @@ export const tools = pgTable("tools", {
   hidden: boolean("hidden").notNull().default(false),
   sort: integer("sort").notNull().default(0),
   logo: text("logo"),
+  askAccess: boolean("ask_access").notNull().default(true),
 });
 
 export const toolCategories = pgTable(
@@ -110,6 +112,8 @@ CREATE TABLE IF NOT EXISTS tools (
   sort integer NOT NULL DEFAULT 0
 );
 ALTER TABLE tools ADD COLUMN IF NOT EXISTS logo text;
+ALTER TABLE tools ADD COLUMN IF NOT EXISTS ask_access boolean NOT NULL DEFAULT true;
+ALTER TABLE tool_ratings ADD COLUMN IF NOT EXISTS access text CHECK (access IN ('enterprise', 'personal', 'unsure'));
 CREATE TABLE IF NOT EXISTS tool_categories (
   tool_id uuid NOT NULL REFERENCES tools(id) ON DELETE CASCADE,
   category_id text NOT NULL REFERENCES categories(id) ON DELETE CASCADE,

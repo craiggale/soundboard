@@ -42,6 +42,13 @@ async function InsightsContent({ searchParams }: Pick<PageProps<"/admin">, "sear
   const practice = practiceNames.find((p) => p === param);
   const data = computeInsights(responses, labels, practice);
 
+  const accessAnswers = data.access.enterprise + data.access.personal + data.access.unsure;
+  const personalTools = data.tools
+    .filter((t) => t.enterprise + t.personal + t.unsureAccess > 0)
+    .map((t) => ({ ...t, answered: t.enterprise + t.personal + t.unsureAccess }))
+    .sort((a, b) => b.personal - a.personal || b.answered - a.answered)
+    .slice(0, TOP_TOOLS);
+
   const filters = [{ label: "All of Song", value: undefined }, ...practiceNames.map((p) => ({ label: p, value: p }))];
 
   return (
@@ -73,12 +80,17 @@ async function InsightsContent({ searchParams }: Pick<PageProps<"/admin">, "sear
               <p className="text-sm text-white/50">Responses</p>
               <p className="mt-2 text-7xl font-semibold tracking-[-0.04em] sm:text-8xl">{data.responses}</p>
             </div>
-            <div className="grid gap-8 sm:grid-cols-3">
+            <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
               <Stat label="Using AI in their work" value={pct(data.usingAi / data.responses)} note={plural(data.usingAi, "person", "people")} />
               <Stat
                 label="Tools per AI user"
                 value={data.usingAi ? (data.toolUses / data.usingAi).toFixed(1) : "0"}
                 note={`${plural(data.tools.filter((t) => t.users > 0).length, "tool")} in use`}
+              />
+              <Stat
+                label="Use not Accenture-provided"
+                value={accessAnswers ? pct(data.access.personal / accessAnswers) : "–"}
+                note={accessAnswers ? `${plural(data.access.personal, "answer")} of ${accessAnswers}` : "No answers yet"}
               />
               <Stat label="Not using AI yet" value={pct(data.notUsingAi / data.responses)} note={plural(data.notUsingAi, "person", "people")} />
             </div>
@@ -147,6 +159,25 @@ async function InsightsContent({ searchParams }: Pick<PageProps<"/admin">, "sear
               </div>
             </section>
           )}
+
+          <div className="mt-6">
+            <Section
+              title="Accenture-provided or not?"
+              subtitle="For each tool, the share of users who didn't tick “Accenture-provided”, so they're likely on a personal or free account. Accenture-built tools aren't asked."
+            >
+              <BarList
+                title="Personal account use"
+                headers={["Tool", "Not Accenture-provided", "Answers"]}
+                rows={personalTools.map((tool) => ({
+                  label: tool.name,
+                  value: tool.personal / tool.answered,
+                  valueLabel: pct(tool.personal / tool.answered),
+                  detail: `${tool.personal} not Accenture-provided · ${tool.enterprise} Accenture-provided`,
+                  aside: String(tool.answered),
+                }))}
+              />
+            </Section>
+          </div>
 
           <div className="mt-6">
             <Section

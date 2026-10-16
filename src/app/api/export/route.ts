@@ -1,5 +1,8 @@
 import { isAdmin } from "@/lib/admin-auth";
+import { ACCESS_OPTIONS } from "@/lib/catalog";
 import { getAllResponses, getLabels, getToolCategoryNames } from "@/lib/data";
+
+const ACCESS_LABELS = new Map<string, string>(ACCESS_OPTIONS.map((o) => [o.id, o.label]));
 
 const HEADERS = [
   "response_id",
@@ -10,6 +13,7 @@ const HEADERS = [
   "tool_category",
   "verdict",
   "impact_1_to_5",
+  "version",
   "purposes",
   "barriers",
   "barrier_note",
@@ -34,7 +38,7 @@ export async function GET() {
     const base = [response.id, response.createdAt.toISOString(), response.practice, labels(response.areas)];
     const tail = [response.barriers.join("; "), response.barrierNote];
     if (response.ratings.length === 0) {
-      lines.push([...base, "", "", "", "", "", ...tail].map(cell).join(","));
+      lines.push([...base, "", "", "", "", "", "", ...tail].map(cell).join(","));
       continue;
     }
     for (const rating of response.ratings) {
@@ -45,6 +49,7 @@ export async function GET() {
           toolCategory.get(rating.tool) ?? "",
           rating.verdict,
           rating.impact,
+          rating.access ? ACCESS_LABELS.get(rating.access) : "",
           labels(rating.purposes),
           ...tail,
         ]
