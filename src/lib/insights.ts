@@ -1,4 +1,4 @@
-import type { Purpose } from "./catalog";
+import { CONTEXT_OPTIONS, type Purpose } from "./catalog";
 import type { ResponseRecord } from "./data";
 
 export type ToolStat = {
@@ -16,6 +16,13 @@ export type ToolStat = {
 };
 export type PurposeStat = { id: string; label: string; count: number; topTools: { name: string; count: number }[] };
 export type CountStat = { name: string; count: number };
+export type AddedToolStat = {
+  name: string;
+  count: number;
+  purposes: string[];
+  contexts: Record<string, number>;
+  licences: Record<string, number>;
+};
 
 export type Insights = {
   responses: number;
@@ -25,6 +32,9 @@ export type Insights = {
   access: { enterprise: number; personal: number; unsure: number };
   tools: ToolStat[];
   purposes: PurposeStat[];
+  contexts: CountStat[];
+  addedTools: AddedToolStat[];
+  comments: string[];
   barriers: CountStat[];
   practices: CountStat[];
 };
@@ -33,7 +43,8 @@ type Labels = { purposes: Purpose[]; practices: string[]; barriers: string[]; em
 
 export function computeInsights(all: ResponseRecord[], labels: Labels, practice?: string): Insights {
   const scoped = practice ? all.filter((r) => r.practice === practice) : all;
-  const usesAi = (r: ResponseRecord) => r.ratings.some((rating) => rating.verdict === "uses");
+  const usesAi = (r: ResponseRecord) =>
+    r.ratings.some((rating) => rating.verdict === "uses") || r.customTools.length > 0;
   const users = scoped.filter(usesAi);
 
   const tools = new Map<
@@ -42,6 +53,8 @@ export function computeInsights(all: ResponseRecord[], labels: Labels, practice?
   >();
   const access = { enterprise: 0, personal: 0, unsure: 0 };
   const purposes = new Map<string, Map<string, number>>(labels.purposes.map((p) => [p.id, new Map()]));
+  const contextCounts = new Map<string, number>(CONTEXT_OPTIONS.map((c) => [c.id, 0]));
+  const added = new Map<string, AddedToolStat & { names: Map<string, number>; purposeSet: Set<string> }>();
   let toolUses = 0;
 
   for (const response of scoped) {
@@ -57,6 +70,7 @@ export function computeInsights(all: ResponseRecord[], labels: Labels, practice?
           access[rating.access] += 1;
         }
         toolUses += 1;
+        for (const context of rating.contexts) contextCounts.set(context, (contextCounts.get(context) ?? 0) + 1);
         for (const purpose of rating.purposes) {
           const byTool = purposes.get(purpose);
           byTool?.set(rating.tool, (byTool.get(rating.tool) ?? 0) + 1);
@@ -64,7 +78,41 @@ export function computeInsights(all: ResponseRecord[], labels: Labels, practice?
       }
       tools.set(rating.tool, entry);
     }
+
+    // Tools people added themselves, grouped regardless of capitalisation.
+    for (const custom of response.customTools) {
+      const key = custom.name.trim().toLowerCase();
+      const entry = added.get(key) ?? {
+        name: custom.name.trim(),
+        count: 0,
+        purposes: [],
+        contexts: {},
+        licences: {},
+        names: new Map<string, number>(),
+        purposeSet: new Set<string>(),
+      };
+      entry.count += 1;
+      entry.names.set(custom.name.trim(), (entry.names.get(custom.name.trim()) ?? 0) + 1);
+      for (const purpose of custom.purposes) entry.purposeSet.add(purpose);
+      for (const context of custom.contexts) {
+        entry.contexts[context] = (entry.contexts[context] ?? 0) + 1;
+        contextCounts.set(context, (contextCounts.get(context) ?? 0) + 1);
+      }
+      entry.licences[custom.licence] = (entry.licences[custom.licence] ?? 0) + 1;
+      added.set(key, entry);
+    }
   }
+
+  const purposeLabel = new Map(labels.purposes.map((p) => [p.id, p.label]));
+  const addedTools: AddedToolStat[] = [...added.values()]
+    .map((entry) => ({
+      name: [...entry.names.entries()].sort((a, b) => b[1] - a[1])[0][0],
+      count: entry.count,
+      purposes: [...entry.purposeSet].map((id) => purposeLabel.get(id) ?? id),
+      contexts: entry.contexts,
+      licences: entry.licences,
+    }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
   const toolStats: ToolStat[] = [...tools.entries()]
     .map(([name, entry]) => ({
@@ -110,6 +158,9 @@ export function computeInsights(all: ResponseRecord[], labels: Labels, practice?
     access,
     tools: toolStats,
     purposes: purposeStats,
+    contexts: CONTEXT_OPTIONS.map((c) => ({ name: c.label, count: contextCounts.get(c.id) ?? 0 })),
+    addedTools,
+    comments: scoped.flatMap((r) => (r.comment ? [r.comment] : [])),
     barriers: [...barrierCounts.entries()]
       .map(([name, count]) => ({ name, count }))
       .filter((b) => b.count > 0)

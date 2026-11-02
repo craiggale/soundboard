@@ -60,6 +60,23 @@ export const ACCESS_OPTIONS = [
 export type Access = (typeof ACCESS_OPTIONS)[number]["id"];
 export const ACCESS_IDS = ACCESS_OPTIONS.map((a) => a.id) as [Access, ...Access[]];
 
+export const CONTEXT_OPTIONS = [
+  { id: "client", label: "Client work" },
+  { id: "internal", label: "Internal work" },
+  { id: "offering", label: "Offering, strategy & proposition development" },
+] as const;
+export type UsageContext = (typeof CONTEXT_OPTIONS)[number]["id"];
+export const CONTEXT_IDS = CONTEXT_OPTIONS.map((c) => c.id) as [UsageContext, ...UsageContext[]];
+
+// Licence for tools people add themselves (catalogue tools use ACCESS_OPTIONS).
+export const LICENCE_OPTIONS = [
+  { id: "enterprise", label: "Accenture enterprise licence" },
+  { id: "personal", label: "Personal licence or account" },
+  { id: "client", label: "Client licence" },
+] as const;
+export type Licence = (typeof LICENCE_OPTIONS)[number]["id"];
+export const LICENCE_IDS = LICENCE_OPTIONS.map((l) => l.id) as [Licence, ...Licence[]];
+
 export const VERDICTS = ["uses", "not_used", "unaware"] as const;
 export type Verdict = (typeof VERDICTS)[number];
 

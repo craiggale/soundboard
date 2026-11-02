@@ -7,6 +7,7 @@ export const responses = pgTable("responses", {
   areas: text("areas").array().notNull().default(sql`'{}'`),
   barriers: text("barriers").array().notNull().default(sql`'{}'`),
   barrierNote: text("barrier_note"),
+  comment: text("comment"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -20,6 +21,20 @@ export const toolRatings = pgTable("tool_ratings", {
   impact: smallint("impact"),
   purposes: text("purposes").array().notNull().default(sql`'{}'`),
   access: text("access"),
+  contexts: text("contexts").array().notNull().default(sql`'{}'`),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Tools respondents add themselves because they aren't in the catalogue.
+export const customTools = pgTable("custom_tools", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  responseId: uuid("response_id")
+    .notNull()
+    .references(() => responses.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  purposes: text("purposes").array().notNull().default(sql`'{}'`),
+  contexts: text("contexts").array().notNull().default(sql`'{}'`),
+  licence: text("licence").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -96,6 +111,17 @@ CREATE TABLE IF NOT EXISTS tool_ratings (
 );
 CREATE INDEX IF NOT EXISTS tool_ratings_uses_idx ON tool_ratings (created_at DESC) WHERE verdict = 'uses';
 CREATE INDEX IF NOT EXISTS tool_ratings_tool_idx ON tool_ratings (tool);
+ALTER TABLE responses ADD COLUMN IF NOT EXISTS comment text;
+ALTER TABLE tool_ratings ADD COLUMN IF NOT EXISTS contexts text[] NOT NULL DEFAULT '{}';
+CREATE TABLE IF NOT EXISTS custom_tools (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  response_id uuid NOT NULL REFERENCES responses(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  purposes text[] NOT NULL DEFAULT '{}',
+  contexts text[] NOT NULL DEFAULT '{}',
+  licence text NOT NULL CHECK (licence IN ('enterprise', 'personal', 'client')),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 CREATE TABLE IF NOT EXISTS categories (
   id text PRIMARY KEY,
   name text NOT NULL,

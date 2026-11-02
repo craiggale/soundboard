@@ -9,13 +9,13 @@ import {
   useTransform,
   type MotionValue,
 } from "motion/react";
-import type { Access, CatalogTool, Purpose, Verdict } from "@/lib/catalog";
+import { CONTEXT_OPTIONS, type Access, type CatalogTool, type Purpose, type UsageContext, type Verdict } from "@/lib/catalog";
 import { Chevron } from "../Chevron";
 import { LogoMark, LogoTile } from "../ToolLogo";
 import { ImpactPicker } from "./ImpactPicker";
 import { Chip, GhostButton, PrimaryButton } from "./ui";
 
-export type Rating = { verdict: Verdict; impact?: number; purposes?: string[]; access?: Access };
+export type Rating = { verdict: Verdict; impact?: number; purposes?: string[]; access?: Access; contexts?: UsageContext[] };
 type Exit = "left" | "right" | "up" | "back";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -68,7 +68,7 @@ export function SwipeDeck({ deck, purposes, ratings, onRate, onFinish, finishing
     onRate(current.name, { verdict });
   }
 
-  function confirmUse(rating: { impact: number; purposes: string[]; access?: Access }) {
+  function confirmUse(rating: { impact: number; purposes: string[]; access?: Access; contexts: UsageContext[] }) {
     if (!current) return;
     setExit("right");
     setFlipped(false);
@@ -295,7 +295,7 @@ function SwipeCard({
   flipped: boolean;
   reduce: boolean;
   onDecide: (verdict: Verdict) => void;
-  onConfirm: (rating: { impact: number; purposes: string[]; access?: Access }) => void;
+  onConfirm: (rating: { impact: number; purposes: string[]; access?: Access; contexts: UsageContext[] }) => void;
   onCancel: () => void;
 }) {
   const x = useMotionValue(0);
@@ -306,9 +306,10 @@ function SwipeCard({
   const unawareOpacity = useTransform(y, [-THRESHOLD, -30], [1, 0]);
 
   const [chosen, setChosen] = useState<string[]>(tool.categoryIds);
+  const [contexts, setContexts] = useState<UsageContext[]>([]);
   const [impact, setImpact] = useState<number | null>(null);
   const [provided, setProvided] = useState(false);
-  const ready = Boolean(impact) && chosen.length > 0;
+  const ready = Boolean(impact) && chosen.length > 0 && contexts.length > 0;
 
   return (
     <motion.div
@@ -367,6 +368,26 @@ function SwipeCard({
               );
             })}
           </div>
+          <h3 className="mt-5 text-xl font-semibold leading-tight tracking-[-0.02em]">Where do you use it?</h3>
+          <div className="mt-3 flex flex-wrap gap-1">
+            {CONTEXT_OPTIONS.map((option) => {
+              const selected = contexts.includes(option.id);
+              return (
+                <Chip
+                  key={option.id}
+                  size="sm"
+                  selected={selected}
+                  onClick={() =>
+                    setContexts((current) =>
+                      selected ? current.filter((c) => c !== option.id) : [...current, option.id],
+                    )
+                  }
+                >
+                  {option.label}
+                </Chip>
+              );
+            })}
+          </div>
           {tool.askAccess && (
             <label className="mt-5 flex cursor-pointer items-start gap-3">
               <input
@@ -395,6 +416,7 @@ function SwipeCard({
                 onConfirm({
                   impact,
                   purposes: chosen,
+                  contexts,
                   access: tool.askAccess ? ((provided ? "enterprise" : "personal") satisfies Access) : undefined,
                 })
               }

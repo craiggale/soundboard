@@ -3,7 +3,7 @@ import { and, asc, count, desc, eq, gt } from "drizzle-orm";
 import { purposesOf, type Catalog, type Purpose } from "./catalog";
 import { getDb, type Db } from "./db";
 import { resolveLogo } from "./logos";
-import { barriers, categories, practices, responses, toolCategories, toolRatings, tools } from "./db/schema";
+import { barriers, categories, customTools, practices, responses, toolCategories, toolRatings, tools } from "./db/schema";
 import type { WallItem } from "./sentence";
 import type { Submission } from "./validation";
 
@@ -156,10 +156,13 @@ export async function createSubmission(submission: Submission): Promise<WallItem
     .filter((r) => toolNames.has(r.tool))
     .map((r) => ({ ...r, purposes: (r.purposes ?? []).filter((id) => purposeIds.has(id)) }))
     .filter((r) => r.verdict !== "uses" || r.purposes.length > 0);
-  const usesAny = ratings.some((r) => r.verdict === "uses");
+  const added = submission.customTools
+    .map((t) => ({ ...t, purposes: t.purposes.filter((id) => purposeIds.has(id)) }))
+    .filter((t) => t.purposes.length > 0);
+  const usesAny = ratings.some((r) => r.verdict === "uses") || added.length > 0;
   const chosenBarriers = submission.barriers.filter((b) => catalog.barriers.includes(b));
 
-  if (!usesAny && chosenBarriers.length === 0 && !submission.note) {
+  if (!usesAny && chosenBarriers.length === 0 && !submission.note && !submission.comment) {
     throw new SubmissionError("Tell us which tools you use, or what's held you back.");
   }
 
@@ -171,9 +174,13 @@ export async function createSubmission(submission: Submission): Promise<WallItem
         areas: submission.areas.filter((id) => purposeIds.has(id)),
         barriers: usesAny ? [] : chosenBarriers,
         barrierNote: usesAny ? null : submission.note || null,
+        comment: submission.comment || null,
       })
       .returning({ id: responses.id });
 
+    if (added.length > 0) {
+      await tx.insert(customTools).values(added.map((t) => ({ ...t, responseId: response.id })));
+    }
     if (ratings.length === 0) return [];
 
     return tx
@@ -186,6 +193,7 @@ export async function createSubmission(submission: Submission): Promise<WallItem
           impact: r.verdict === "uses" ? r.impact : null,
           purposes: r.verdict === "uses" ? r.purposes : [],
           access: r.verdict === "uses" && asksAccess.has(r.tool) ? (r.access ?? null) : null,
+          contexts: r.verdict === "uses" ? (r.contexts ?? []) : [],
         })),
       )
       .returning({
@@ -211,21 +219,39 @@ export type ResponseRecord = {
   areas: string[];
   barriers: string[];
   barrierNote: string | null;
+  comment: string | null;
   createdAt: Date;
-  ratings: { tool: string; verdict: string; impact: number | null; purposes: string[]; access: string | null }[];
+  ratings: {
+    tool: string;
+    verdict: string;
+    impact: number | null;
+    purposes: string[];
+    access: string | null;
+    contexts: string[];
+  }[];
+  customTools: { name: string; purposes: string[]; contexts: string[]; licence: string }[];
 };
 
 export async function getAllResponses(): Promise<ResponseRecord[]> {
   await connection();
   const db = await getDb();
-  const [responseRows, ratingRows] = await Promise.all([
+  const [responseRows, ratingRows, customRows] = await Promise.all([
     db.select().from(responses).orderBy(desc(responses.createdAt)),
     db.select().from(toolRatings).orderBy(toolRatings.createdAt),
+    db.select().from(customTools).orderBy(customTools.createdAt),
   ]);
 
   const byResponse = new Map<string, ResponseRecord>(
-    responseRows.map((row) => [row.id, { ...row, ratings: [] }]),
+    responseRows.map((row) => [row.id, { ...row, ratings: [], customTools: [] }]),
   );
+  for (const row of customRows) {
+    byResponse.get(row.responseId)?.customTools.push({
+      name: row.name,
+      purposes: row.purposes,
+      contexts: row.contexts,
+      licence: row.licence,
+    });
+  }
   for (const row of ratingRows) {
     byResponse.get(row.responseId)?.ratings.push({
       tool: row.tool,
@@ -233,6 +259,7 @@ export async function getAllResponses(): Promise<ResponseRecord[]> {
       impact: row.impact,
       purposes: row.purposes,
       access: row.access,
+      contexts: row.contexts,
     });
   }
   return [...byResponse.values()];

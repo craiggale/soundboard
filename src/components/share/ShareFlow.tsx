@@ -9,10 +9,11 @@ import type { WallItem } from "@/lib/sentence";
 import { BrandMark, Chevron } from "../Chevron";
 import { RevealText } from "../RevealText";
 import { UseCaseCard } from "../UseCaseCard";
+import { AddTools, type CustomTool } from "./AddTools";
 import { SwipeDeck, type Rating } from "./SwipeDeck";
 import { Chip, Eyebrow, Footer, GhostButton, PrimaryButton, PrimaryLink, StepTitle } from "./ui";
 
-type Step = "practice" | "areas" | "deck" | "barriers" | "done";
+type Step = "practice" | "areas" | "deck" | "extras" | "barriers" | "done";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const SWIPE = [0.76, 0, 0.24, 1] as const;
@@ -46,6 +47,8 @@ function Flow({ catalog, onComplete }: { catalog: Catalog; onComplete: () => voi
   const [practice, setPractice] = useState<string | null>(null);
   const [areas, setAreas] = useState<string[]>([]);
   const [ratings, setRatings] = useState<Record<string, Rating>>({});
+  const [customTools, setCustomTools] = useState<CustomTool[]>([]);
+  const [comment, setComment] = useState("");
   const [barriers, setBarriers] = useState<string[]>([]);
   const [note, setNote] = useState("");
 
@@ -56,7 +59,7 @@ function Flow({ catalog, onComplete }: { catalog: Catalog; onComplete: () => voi
   const deck = useMemo(() => buildDeck(catalog, areas), [catalog, areas]);
   const areaOptions = useMemo(() => areasOf(catalog), [catalog]);
   const purposes = useMemo(() => purposesOf(catalog), [catalog]);
-  const usesAny = Object.values(ratings).some((r) => r.verdict === "uses");
+  const usesAny = Object.values(ratings).some((r) => r.verdict === "uses") || customTools.length > 0;
 
   function go(next: Step, dir = 1) {
     setError(null);
@@ -86,6 +89,8 @@ function Flow({ catalog, onComplete }: { catalog: Catalog; onComplete: () => voi
           practice,
           areas,
           ratings: Object.entries(ratings).map(([tool, rating]) => ({ tool, ...rating })),
+          customTools,
+          comment: comment.trim() || undefined,
           barriers: withBarriers ? barriers : [],
           note: withBarriers ? note.trim() || undefined : undefined,
         }),
@@ -104,7 +109,13 @@ function Flow({ catalog, onComplete }: { catalog: Catalog; onComplete: () => voi
     }
   }
 
-  const flow: Step[] = ["practice", "areas", "deck", ...(step === "barriers" ? (["barriers"] as const) : [])];
+  const flow: Step[] = [
+    "practice",
+    "areas",
+    "deck",
+    "extras",
+    ...(step === "barriers" ? (["barriers"] as const) : []),
+  ];
   const current = step === "done" ? flow.length : flow.indexOf(step);
 
   const variants = {
@@ -125,7 +136,10 @@ function Flow({ catalog, onComplete }: { catalog: Catalog; onComplete: () => voi
           <>
             <Eyebrow>Step 1 · About you</Eyebrow>
             <StepTitle>Where do you sit at Song?</StepTitle>
-            <ul className="mt-10 border-t border-white/10">
+            <p className="mt-4 max-w-3xl text-base text-white/55">
+              Anonymous: no sign-in, and nothing links your answers to your name or employee ID.
+            </p>
+            <ul className="mt-8 grid border-t border-white/10 md:grid-cols-2 md:gap-x-14">
               {catalog.practices.map(({ name: option, summary }, i) => (
                 <li key={option} className="border-b border-white/10">
                   <button
@@ -134,22 +148,22 @@ function Flow({ catalog, onComplete }: { catalog: Catalog; onComplete: () => voi
                       setPractice(option);
                       go("areas");
                     }}
-                    className="group flex w-full items-center gap-6 py-4 text-left"
+                    className="group flex w-full items-center gap-5 py-3 text-left"
                   >
                     <span className="w-8 shrink-0 text-sm tabular-nums text-white/30 transition-colors group-hover:text-brand-soft">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <span className="transition-transform duration-500 ease-expo group-hover:translate-x-3">
                       <span
-                        className={`block text-[clamp(1.4rem,2.6vw,2.1rem)] font-semibold leading-tight tracking-tight ${
+                        className={`block text-[clamp(1.15rem,1.9vw,1.5rem)] font-semibold leading-tight tracking-tight ${
                           practice === option ? "text-brand-soft" : ""
                         }`}
                       >
                         {option}
                       </span>
-                      <span className="mt-0.5 block text-sm text-white/45">{summary}</span>
+                      <span className="mt-0.5 block text-[13px] leading-snug text-white/45">{summary}</span>
                     </span>
-                    <Chevron className="ml-auto h-7 w-auto -translate-x-4 text-brand opacity-0 transition-all duration-500 ease-expo group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100" />
+                    <Chevron className="ml-auto h-5 w-auto shrink-0 -translate-x-4 text-brand opacity-0 transition-all duration-500 ease-expo group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100" />
                   </button>
                 </li>
               ))}
@@ -217,15 +231,55 @@ function Flow({ catalog, onComplete }: { catalog: Catalog; onComplete: () => voi
               ratings={ratings}
               onRate={rate}
               finishing={saving}
-              onFinish={() => (usesAny ? submit(false) : go("barriers"))}
+              onFinish={() => go("extras")}
             />
           </div>
+        );
+
+      case "extras":
+        return (
+          <>
+            <Eyebrow>Step 4 · Anything we missed?</Eyebrow>
+            <StepTitle>Using something that wasn&apos;t in the deck?</StepTitle>
+            <p className="mt-5 max-w-2xl text-lg text-white/55">
+              Add any AI tools you use that we didn&apos;t show you. Nothing to add? Skip straight on.
+            </p>
+            <div className="mt-10">
+              <AddTools purposes={purposes} tools={customTools} onChange={setCustomTools} />
+            </div>
+            <label className="mt-12 block max-w-2xl">
+              <span className="text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
+                Any other thoughts on AI at Song? <span className="text-white/30">Optional</span>
+              </span>
+              <textarea
+                value={comment}
+                onChange={(event) => setComment(event.target.value)}
+                maxLength={1000}
+                rows={3}
+                className="mt-3 w-full resize-none border-b-2 border-white/20 bg-transparent py-2 text-xl outline-none transition-colors placeholder:text-white/25 focus:border-brand focus-visible:outline-none"
+              />
+            </label>
+            {error && (
+              <p role="alert" className="mt-6 text-brand-pale">
+                {error}
+              </p>
+            )}
+            <Footer>
+              <GhostButton onClick={() => go("deck", -1)}>Back</GhostButton>
+              <PrimaryButton
+                disabled={saving}
+                onClick={() => (usesAny ? submit(false) : go("barriers"))}
+              >
+                {saving ? "Sending…" : usesAny ? "Send" : "Continue"}
+              </PrimaryButton>
+            </Footer>
+          </>
         );
 
       case "barriers":
         return (
           <>
-            <Eyebrow>Step 4 · What&apos;s in the way</Eyebrow>
+            <Eyebrow>Step 5 · What&apos;s in the way</Eyebrow>
             <StepTitle>Fair enough. What&apos;s held you back so far?</StepTitle>
             <p className="mt-5 text-lg text-white/55">Pick any that apply. This is just as useful to us.</p>
             <div className="mt-10 flex flex-wrap gap-2.5">
@@ -262,8 +316,8 @@ function Flow({ catalog, onComplete }: { catalog: Catalog; onComplete: () => voi
               </p>
             )}
             <Footer>
-              <GhostButton onClick={() => go("deck", -1)}>Back</GhostButton>
-              <PrimaryButton disabled={(barriers.length === 0 && !note.trim()) || saving} onClick={() => submit(true)}>
+              <GhostButton onClick={() => go("extras", -1)}>Back</GhostButton>
+              <PrimaryButton disabled={(barriers.length === 0 && !note.trim() && !comment.trim()) || saving} onClick={() => submit(true)}>
                 {saving ? "Sending…" : "Send"}
               </PrimaryButton>
             </Footer>
@@ -280,8 +334,8 @@ function Flow({ catalog, onComplete }: { catalog: Catalog; onComplete: () => voi
               />
               <FadeUp delay={0.6}>
                 <p className="mt-8 max-w-xl text-lg leading-relaxed text-white/60">
-                  Knowing what gets in the way matters as much as knowing what works. Take a look at how colleagues
-                  are using AI. You might spot something worth trying.
+                  Whether it&apos;s what you use or what gets in the way, it all helps us decide where to invest. Take a
+                  look at how colleagues are using AI. You might spot something worth trying.
                 </p>
                 <Footer>
                   <PrimaryLink href="/">See the board</PrimaryLink>
@@ -353,7 +407,7 @@ function Flow({ catalog, onComplete }: { catalog: Catalog; onComplete: () => voi
       </header>
 
       <main className="relative z-10 flex flex-1 items-center px-6 pb-16 pt-4 sm:px-10 lg:px-14">
-        <div className={`mx-auto w-full ${step === "deck" ? "max-w-6xl" : "max-w-4xl"}`}>
+        <div className={`mx-auto w-full ${step === "deck" || step === "practice" ? "max-w-6xl" : "max-w-4xl"}`}>
           <AnimatePresence mode="wait" custom={direction} initial={false}>
             <motion.div key={step} custom={direction} variants={variants} initial="enter" animate="center" exit="exit">
               {renderStep()}

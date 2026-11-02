@@ -3,7 +3,7 @@ import { and, asc, count, eq, ne, sql } from "drizzle-orm";
 import type { Logo } from "./catalog";
 import { getDb } from "./db";
 import { isLogoSlug, resolveLogo } from "./logos";
-import { barriers, categories, practices, responses, toolCategories, toolRatings, tools } from "./db/schema";
+import { barriers, categories, customTools, practices, responses, toolCategories, toolRatings, tools } from "./db/schema";
 
 export class AdminError extends Error {}
 
@@ -205,7 +205,12 @@ export async function deleteCategory(id: string) {
     .from(toolRatings)
     .where(sql`${id} = ANY(${toolRatings.purposes})`)
     .limit(1);
-  if (used.length || usedInRatings.length) {
+  const usedInCustom = await db
+    .select({ id: customTools.id })
+    .from(customTools)
+    .where(sql`${id} = ANY(${customTools.purposes})`)
+    .limit(1);
+  if (used.length || usedInRatings.length || usedInCustom.length) {
     throw new AdminError("People have already chosen this purpose, so it can't be deleted. Hide it instead.");
   }
   await db.delete(categories).where(eq(categories.id, id));

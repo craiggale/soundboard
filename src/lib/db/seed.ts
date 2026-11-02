@@ -93,14 +93,24 @@ export const SEED_CATEGORIES: {
 export const SEED_EMERGING = ["AdTune", "Song.AI", "Song Workbench", "Reinvention AI", "Writer", "Gradial", "Deep Research Agent"];
 
 export const SEED_PRACTICES = [
-  { name: "Customer Growth", summary: "Industry, strategy & insights" },
+  { name: "Customer Growth Strategy & Insights", summary: "Industry, strategy & insights" },
   { name: "Marketing", summary: "Brands, engagement and loyalty across channels and media" },
   { name: "Design & Digital Products", summary: "Digital services, products and ventures" },
   { name: "Commerce", summary: "Growth across commerce channels, from eCommerce to social" },
   { name: "Sales", summary: "Turning demand into revenue" },
   { name: "Service", summary: "High-value service experiences" },
-  { name: "Customer Data & AI", summary: "AI-ready data, real-time insight and personalisation" },
+  { name: "Customer Tech", summary: "Technology that powers customer experiences" },
+  { name: "Salesforce", summary: "Salesforce-led customer experience and CRM" },
+  { name: "AI & Data", summary: "AI-ready data, real-time insight and personalisation" },
+  { name: "Droga5", summary: "Creative ideas and brand-building" },
 ];
+
+// Applied once to databases seeded before the list changed. Renames carry
+// existing responses with them; anything new is appended. Later edits belong in /admin.
+export const PRACTICES_V2_RENAMES: Record<string, string> = {
+  "Customer Growth": "Customer Growth Strategy & Insights",
+  "Customer Data & AI": "AI & Data",
+};
 
 export const SEED_BARRIERS = [
   "No access or licence",

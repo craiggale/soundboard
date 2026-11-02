@@ -56,14 +56,14 @@ export function Hero() {
         />
         <motion.p {...fadeUp(0.75)} className="mt-8 max-w-lg text-lg leading-relaxed text-white/60">
           Swipe through the AI tools out there. Tell us which ones you use, what for, and how much
-          you&apos;d miss them. It&apos;s quick, it&apos;s anonymous, and your answers join the board.
+          you&apos;d miss them. It&apos;s quick and anonymous: no sign-in, and nothing links your answers to your name or employee ID.
         </motion.p>
         <motion.div {...fadeUp(0.9)} className="mt-10 flex flex-wrap items-center gap-6">
           <Link
             href="/share"
             className="group relative inline-flex items-center gap-4 overflow-hidden bg-brand px-8 py-5 text-lg font-semibold transition-colors hover:bg-brand-deep"
           >
-            Add yours
+            Tell us what you use
             <span className="relative flex h-4 w-6 items-center overflow-hidden">
               <Chevron className="absolute h-4 w-auto transition-transform duration-500 ease-expo group-hover:translate-x-6" />
               <Chevron className="absolute h-4 w-auto -translate-x-6 transition-transform duration-500 ease-expo group-hover:translate-x-0" />

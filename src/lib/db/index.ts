@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import * as schema from "./schema";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   SEED_ACCENTURE_ONLY,
   SEED_BARRIERS,
@@ -10,6 +10,7 @@ import {
   SEED_EMERGING,
   SEED_LOGOS,
   SEED_PRACTICES,
+  PRACTICES_V2_RENAMES,
 } from "./seed";
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
@@ -102,6 +103,29 @@ async function seedOnce(db: Db): Promise<Db> {
       .returning();
     if (!claimed.length) return;
     await tx.update(schema.tools).set({ askAccess: false }).where(inArray(schema.tools.name, SEED_ACCENTURE_ONLY));
+  });
+
+  await db.transaction(async (tx) => {
+    const claimed = await tx
+      .insert(schema.appMeta)
+      .values({ key: "practices_seeded_v2", value: new Date().toISOString() })
+      .onConflictDoNothing()
+      .returning();
+    if (!claimed.length) return;
+    for (const [from, to] of Object.entries(PRACTICES_V2_RENAMES)) {
+      const [existing] = await tx.select().from(schema.practices).where(eq(schema.practices.name, from));
+      const [taken] = await tx.select().from(schema.practices).where(eq(schema.practices.name, to));
+      if (!existing || taken) continue;
+      await tx.update(schema.practices).set({ name: to }).where(eq(schema.practices.id, existing.id));
+      await tx.update(schema.responses).set({ practice: to }).where(eq(schema.responses.practice, from));
+    }
+    const present = new Set((await tx.select({ name: schema.practices.name }).from(schema.practices)).map((p) => p.name));
+    const missing = SEED_PRACTICES.filter((p) => !present.has(p.name));
+    if (missing.length === 0) return;
+    const [{ max }] = await tx
+      .select({ max: sql<number>`coalesce(max(${schema.practices.sort}), -1)` })
+      .from(schema.practices);
+    await tx.insert(schema.practices).values(missing.map((p, i) => ({ ...p, sort: Number(max) + 1 + i })));
   });
   return db;
 }

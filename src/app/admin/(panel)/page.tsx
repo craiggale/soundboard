@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { Chevron } from "@/components/Chevron";
 import { BarList } from "@/components/insights/BarList";
+import { CONTEXT_OPTIONS, LICENCE_OPTIONS } from "@/lib/catalog";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getAllResponses, getLabels } from "@/lib/data";
 import { computeInsights } from "@/lib/insights";
@@ -12,6 +13,8 @@ export const metadata: Metadata = {
 };
 
 const TOP_TOOLS = 15;
+const CONTEXT_LABELS = new Map<string, string>(CONTEXT_OPTIONS.map((c) => [c.id, c.label]));
+const LICENCE_LABELS = new Map<string, string>(LICENCE_OPTIONS.map((l) => [l.id, l.label]));
 const pct = (value: number) => `${Math.round(value * 100)}%`;
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -160,6 +163,54 @@ async function InsightsContent({ searchParams }: Pick<PageProps<"/admin">, "sear
             </section>
           )}
 
+          <div className="mt-6 grid gap-6 xl:grid-cols-2">
+            <Section
+              title="Where AI gets used"
+              subtitle="Tool uses by the kind of work they support, including tools people added themselves. One tool can cover several."
+            >
+              <BarList
+                title="Usage context"
+                headers={["Context", "Tool uses"]}
+                rows={data.contexts.map((c) => ({
+                  label: c.name,
+                  value: c.count,
+                  valueLabel: String(c.count),
+                  detail: "",
+                }))}
+              />
+            </Section>
+
+            <Section
+              title="Tools people added"
+              subtitle="Tools that weren't in the deck. Worth considering for the catalogue."
+            >
+              {data.addedTools.length === 0 ? (
+                <p className="text-sm text-white/45">Nobody has added a tool yet.</p>
+              ) : (
+                <BarList
+                  title="Added tools"
+                  headers={["Tool", "People"]}
+                  rows={data.addedTools.slice(0, TOP_TOOLS).map((tool) => ({
+                    label: tool.name,
+                    value: tool.count,
+                    valueLabel: String(tool.count),
+                    detail: [
+                      tool.purposes.join(", "),
+                      Object.entries(tool.contexts)
+                        .map(([id, n]) => `${CONTEXT_LABELS.get(id) ?? id} ×${n}`)
+                        .join(", "),
+                      Object.entries(tool.licences)
+                        .map(([id, n]) => `${LICENCE_LABELS.get(id) ?? id} ×${n}`)
+                        .join(", "),
+                    ]
+                      .filter(Boolean)
+                      .join(" · "),
+                  }))}
+                />
+              )}
+            </Section>
+          </div>
+
           <div className="mt-6">
             <Section
               title="Accenture-provided or not?"
@@ -215,6 +266,20 @@ async function InsightsContent({ searchParams }: Pick<PageProps<"/admin">, "sear
                   }))}
               />
             </Section>
+
+            {data.comments.length > 0 && (
+              <div className="xl:col-span-2">
+                <Section title="Comments" subtitle="Optional free-text thoughts, newest first. Anonymous.">
+                  <ul className="space-y-4">
+                    {data.comments.map((text, i) => (
+                      <li key={i} className="border-l-2 border-white/15 pl-4 text-[15px] text-white/80">
+                        {text}
+                      </li>
+                    ))}
+                  </ul>
+                </Section>
+              </div>
+            )}
 
             <Section title="Who's responded" subtitle="Responses by practice, across all of Song.">
               <BarList
