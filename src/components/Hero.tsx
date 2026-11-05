@@ -16,7 +16,7 @@ export function Hero() {
   });
 
   return (
-    <section className="grain relative isolate flex min-h-[88dvh] flex-col overflow-hidden px-6 py-6 sm:px-10 lg:min-h-dvh lg:px-14 lg:py-10">
+    <section className="grain relative isolate flex min-h-[88dvh] flex-col overflow-hidden px-6 py-6 sm:px-10 lg:min-h-dvh lg:px-14 lg:py-[min(2.5rem,4dvh)]">
       <motion.svg
         viewBox="0 0 64 100"
         aria-hidden="true"
@@ -41,10 +41,10 @@ export function Hero() {
         <span className="text-[11px] font-medium uppercase tracking-[0.25em] text-white/50">Song Unplugged</span>
       </motion.header>
 
-      <div className="my-auto max-w-2xl py-16">
+      <div className="my-auto max-w-2xl py-8 lg:py-6">
         <motion.p
           {...fadeUp(0.1)}
-          className="mb-6 text-xs font-semibold uppercase tracking-[0.3em] text-brand-soft"
+          className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-brand-soft lg:mb-[min(1.5rem,2.5dvh)]"
         >
           Song · AI in practice
         </motion.p>
@@ -52,13 +52,13 @@ export function Hero() {
           text="How is AI showing up in your work?"
           highlight={["AI"]}
           delay={0.15}
-          className="text-[clamp(2.75rem,6.4vw,6rem)] font-semibold leading-[0.98] tracking-[-0.035em]"
+          className="text-[clamp(2.5rem,min(5vw,10dvh),6rem)] font-semibold leading-[0.98] tracking-[-0.035em]"
         />
-        <motion.p {...fadeUp(0.75)} className="mt-8 max-w-lg text-lg leading-relaxed text-white/60">
+        <motion.p {...fadeUp(0.75)} className="mt-6 max-w-lg text-base leading-relaxed text-white/60 lg:mt-[min(2rem,3.5dvh)] lg:text-lg">
           Swipe through the AI tools out there. Tell us which ones you use, what for, and how much
           you&apos;d miss them. It&apos;s quick and anonymous: no sign-in, and nothing links your answers to your name or employee ID.
         </motion.p>
-        <motion.div {...fadeUp(0.9)} className="mt-10 flex flex-wrap items-center gap-6">
+        <motion.div {...fadeUp(0.9)} className="mt-8 flex flex-wrap items-center gap-6 lg:mt-[min(2.5rem,4dvh)]">
           <Link
             href="/share"
             className="group relative inline-flex items-center gap-4 overflow-hidden bg-brand px-8 py-5 text-lg font-semibold transition-colors hover:bg-brand-deep"
