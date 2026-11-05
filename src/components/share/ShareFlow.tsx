@@ -136,11 +136,9 @@ function Flow({ catalog, onComplete }: { catalog: Catalog; onComplete: () => voi
           <>
             <Eyebrow>Step 1 · About you</Eyebrow>
             <StepTitle>Where do you sit at Song?</StepTitle>
-            <p className="mt-4 max-w-3xl text-lg text-white/70">
-              Don&apos;t worry if your exact team isn&apos;t listed, we just want to see where you most identify.
-            </p>
-            <p className="mt-2 max-w-3xl text-base text-white/55">
-              Anonymous: no sign-in, and nothing links your answers to your name or employee ID.
+            <p className="mt-4 max-w-4xl text-lg leading-relaxed text-white/60">
+              Don&apos;t worry if your exact team isn&apos;t listed, we just want to see where you most identify. This
+              survey is anonymous: no sign-in, and nothing links your answers to your name or employee ID.
             </p>
             <ul className="mt-8 grid border-t border-white/10 md:grid-cols-2 md:gap-x-14">
               {catalog.practices.map(({ name: option, summary }, i) => (
